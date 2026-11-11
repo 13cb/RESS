@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Auto-reloads the page entirely every 30 seconds as requested -->
+    <meta http-equiv="refresh" content="30">
+    <title>Echo Show Dashboard</title>
+    
+    <!-- Tailwind CSS for rapid styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <style>
+        /* Custom text shadow for extreme legibility over various background colors */
+        .text-shadow-heavy {
+            text-shadow: 0 4px 12px rgba(0, 0, 0, 0.7), 0 0 40px rgba(0,0,0,0.6);
+        }
+
+        /* Subtle fade-in to make the 30-second reloads slightly less jarring */
+        @keyframes fadeIn {
+            from { opacity: 0.6; }
+            to { opacity: 1; }
+        }
+        body { 
+            animation: fadeIn 0.8s ease-out forwards; 
+        }
+
+        /* Google Font for a modern digital look */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;500;700;900&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+    </style>
+</head>
+<body class="h-screen w-screen overflow-hidden text-white bg-black select-none">
+
+    <!-- High-quality landscape background from Unsplash -->
+    <img 
+        src="https://images.unsplash.com/photo-1506744626753-14016f43c321?q=80&w=1920&auto=format&fit=crop" 
+        alt="Landscape Background" 
+        class="absolute inset-0 w-full h-full object-cover z-0" 
+    />
+
+    <!-- Translucent Overlay to ensure text readability -->
+    <div class="absolute inset-0 bg-gradient-to-b from-black/30 via-black/10 to-black/60 z-10 pointer-events-none"></div>
+
+    <!-- Main Content Container -->
+    <div class="relative z-20 flex flex-col justify-between h-full p-10 md:p-16">
+        
+        <!-- Top Section: Weather Widget (Teaneck, NJ) -->
+        <div class="flex justify-end w-full">
+            <div class="text-right text-shadow-heavy">
+                <div class="flex items-center justify-end gap-3">
+                    <span id="weather-icon" class="text-5xl"></span>
+                    <div id="weather-temp" class="text-7xl font-bold tracking-tighter">--°</div>
+                </div>
+                <div id="weather-desc" class="text-3xl font-medium mt-2">Fetching weather...</div>
+                <div class="text-xl text-gray-200 mt-1 opacity-80 font-light tracking-wide uppercase">Teaneck, NJ</div>
+            </div>
+        </div>
+
+        <!-- Bottom Section: Time and Date -->
+        <div class="mb-4 text-shadow-heavy">
+            <div class="flex items-baseline gap-4">
+                <div id="time" class="text-[12rem] font-black leading-none tracking-tight">--:--</div>
+                <div id="ampm" class="text-5xl font-bold mb-4 opacity-90"></div>
+            </div>
+            <div id="date" class="text-4xl font-medium mt-2 text-gray-100 pl-2 opacity-90">---</div>
+        </div>
+
+    </div>
+
+    <script>
+        /**
+         * Updates the clock and date every second so it stays accurate 
+         * between the 30-second hard reloads.
+         */
+        function updateTime() {
+            const now = new Date();
+            let hours = now.getHours();
+            const minutes = now.getMinutes().toString().padStart(2, '0');
+            const ampm = hours >= 12 ? 'PM' : 'AM';
+            
+            hours = hours % 12;
+            hours = hours ? hours : 12; // Handle midnight (0 hours)
+
+            document.getElementById('time').textContent = `${hours}:${minutes}`;
+            document.getElementById('ampm').textContent = ampm;
+
+            const options = { weekday: 'long', month: 'long', day: 'numeric' };
+            document.getElementById('date').textContent = now.toLocaleDateString('en-US', options);
+        }
+
+        /**
+         * Fetches current weather data from the free Open-Meteo API.
+         * Default Coordinates: Teaneck, NJ (40.8976, -74.0154)
+         */
+        async function fetchWeather() {
+            try {
+                const lat = 40.8976;
+                const lon = -74.0154;
+                const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code&temperature_unit=fahrenheit`;
+
+                const response = await fetch(url);
+                const data = await response.json();
+
+                if (data && data.current) {
+                    const temp = Math.round(data.current.temperature_2m);
+                    const code = data.current.weather_code;
+                    const weatherInfo = getWeatherDescription(code);
+
+                    document.getElementById('weather-temp').textContent = `${temp}°`;
+                    document.getElementById('weather-desc').textContent = weatherInfo.text;
+                    document.getElementById('weather-icon').textContent = weatherInfo.icon;
+                }
+            } catch (error) {
+                console.error('Failed to fetch weather data:', error);
+                document.getElementById('weather-desc').textContent = 'Weather Unavailable';
+            }
+        }
+
+        /**
+         * Maps WMO weather codes to descriptive text and emojis
+         */
+        function getWeatherDescription(code) {
+            const map = {
+                0:  { text: 'Clear sky', icon: '☀️' },
+                1:  { text: 'Mainly clear', icon: '🌤️' },
+                2:  { text: 'Partly cloudy', icon: '⛅' },
+                3:  { text: 'Overcast', icon: '☁️' },
+                45: { text: 'Fog', icon: '🌫️' },
+                48: { text: 'Rime fog', icon: '🌫️' },
+                51: { text: 'Light drizzle', icon: '🌧️' },
+                53: { text: 'Moderate drizzle', icon: '🌧️' },
+                55: { text: 'Dense drizzle', icon: '🌧️' },
+                61: { text: 'Slight rain', icon: '🌧️' },
+                63: { text: 'Moderate rain', icon: '🌧️' },
+                65: { text: 'Heavy rain', icon: '🌧️' },
+                71: { text: 'Slight snow', icon: '❄️' },
+                73: { text: 'Moderate snow', icon: '❄️' },
+                75: { text: 'Heavy snow', icon: '❄️' },
+                77: { text: 'Snow grains', icon: '❄️' },
+                80: { text: 'Slight showers', icon: '🌦️' },
+                81: { text: 'Moderate showers', icon: '🌦️' },
+                82: { text: 'Violent showers', icon: '⛈️' },
+                95: { text: 'Thunderstorm', icon: '⛈️' },
+                96: { text: 'Thunderstorm & hail', icon: '⛈️' },
+                99: { text: 'Heavy thunderstorm', icon: '⛈️' }
+            };
+            return map[code] || { text: 'Unknown', icon: '🌡️' };
+        }
+
+        // Initialization
+        updateTime();
+        setInterval(updateTime, 1000); // Keep time ticking every second
+        fetchWeather(); // Fetch weather on load (which happens every 30s due to meta tag)
+    </script>
+</body>
+</html>
