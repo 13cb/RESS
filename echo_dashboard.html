@@ -25,6 +25,21 @@
             animation: fadeIn 0.8s ease-out forwards; 
         }
 
+        /* Equalizer wave animation for the Now Playing widget */
+        @keyframes soundBars {
+            0%, 100% { height: 4px; }
+            50% { height: 18px; }
+        }
+        .bar-1 { animation: soundBars 1.1s ease-in-out infinite; }
+        .bar-2 { animation: soundBars 0.8s ease-in-out infinite 0.2s; }
+        .bar-3 { animation: soundBars 1.3s ease-in-out infinite 0.4s; }
+        .bar-4 { animation: soundBars 0.9s ease-in-out infinite 0.1s; }
+
+        /* Smooth cross-fade between background changes */
+        #bg-image {
+            transition: opacity 0.8s ease-in-out;
+        }
+
         /* Google Font for a modern digital look */
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;500;700;900&display=swap');
         body {
@@ -34,45 +49,77 @@
 </head>
 <body class="h-screen w-screen overflow-hidden text-white bg-black select-none">
 
-    <!-- High-quality landscape background from Unsplash -->
+    <!-- High-quality dynamic background loaded based on weather & time -->
     <img 
-        src="https://images.unsplash.com/photo-1506744012022-28d015cadaa2?q=80&w=1920&auto=format&fit=crop" 
-        alt="Landscape Background" 
-        class="absolute inset-0 w-full h-full object-cover z-0" 
+        id="bg-image"
+        src="https://images.unsplash.com/photo-1506744626753-1fa44df31c28?q=80&w=1920&auto=format&fit=crop" 
+        alt="Weather Background" 
+        class="absolute inset-0 w-full h-full object-cover z-0 transition-all duration-1000 scale-105" 
     />
 
     <!-- Translucent Overlay to ensure text readability -->
-    <div class="absolute inset-0 bg-gradient-to-b from-black/30 via-black/10 to-black/60 z-10 pointer-events-none"></div>
+    <div class="absolute inset-0 bg-gradient-to-b from-black/50 via-black/25 to-black/75 z-10 pointer-events-none"></div>
 
     <!-- Main Content Container -->
-    <div class="relative z-20 flex flex-col justify-between h-full p-6 sm:p-10 md:p-16 overflow-y-auto md:overflow-hidden">
+    <div class="relative z-20 flex flex-col justify-between h-full p-[clamp(1rem,3.5vw,3rem)]">
         
-        <!-- Top Section: Current Weather Widget (Teaneck, NJ) -->
-        <div class="flex justify-center md:justify-end w-full pt-4 md:pt-0">
-            <div class="text-center md:text-right text-shadow-heavy">
-                <div class="flex items-center justify-center md:justify-end gap-2 md:gap-3">
-                    <span id="weather-icon" class="text-4xl sm:text-5xl lg:text-6xl"></span>
-                    <div id="weather-temp" class="text-5xl sm:text-7xl lg:text-8xl font-bold tracking-tighter">--°</div>
+        <!-- Top Section: Now Playing Widget (Left) & Weather Widget (Right) -->
+        <div class="flex flex-row justify-between items-start w-full gap-4">
+            
+            <!-- Now Playing Media Status Widget -->
+            <div id="media-widget" class="flex items-center gap-3 bg-black/45 backdrop-blur-md border border-white/10 rounded-2xl p-2.5 sm:p-3 shadow-2xl max-w-[280px] sm:max-w-xs transition-all">
+                <div class="relative flex-shrink-0 w-12 h-12 sm:w-14 sm:h-14 rounded-xl overflow-hidden shadow-md">
+                    <img id="media-art" src="https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?q=80&w=300&auto=format&fit=crop" alt="Album Art" class="w-full h-full object-cover" />
+                    <div class="absolute inset-0 bg-black/10"></div>
                 </div>
-                <div id="weather-desc" class="text-xl sm:text-2xl lg:text-3xl font-medium mt-1 md:mt-2">Fetching weather...</div>
-                <div class="text-sm sm:text-lg lg:text-xl text-gray-200 mt-1 opacity-80 font-light tracking-wide uppercase">Teaneck, NJ</div>
+                <div class="flex-1 min-w-0 pr-1">
+                    <div class="flex items-center justify-between gap-1">
+                        <span class="text-[10px] uppercase tracking-wider font-semibold text-emerald-400 flex items-center gap-1.5">
+                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                            Now Playing
+                        </span>
+                        <!-- Animated mini sound wave bars -->
+                        <div class="flex items-end gap-0.5 h-4">
+                            <div class="w-0.5 bg-emerald-400 rounded-full bar-1"></div>
+                            <div class="w-0.5 bg-emerald-400 rounded-full bar-2"></div>
+                            <div class="w-0.5 bg-emerald-400 rounded-full bar-3"></div>
+                            <div class="w-0.5 bg-emerald-400 rounded-full bar-4"></div>
+                        </div>
+                    </div>
+                    <div id="media-title" class="text-xs sm:text-sm font-semibold truncate text-white mt-0.5">Midnight City</div>
+                    <div id="media-artist" class="text-[11px] sm:text-xs text-gray-300 truncate">M83</div>
+                    <!-- Audio Progress bar -->
+                    <div class="w-full bg-white/20 h-1 rounded-full mt-1.5 overflow-hidden">
+                        <div id="media-progress" class="bg-white/80 h-full rounded-full transition-all duration-1000" style="width: 58%;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Current Weather Widget (Teaneck, NJ) -->
+            <div class="text-right text-shadow-heavy flex-shrink-0">
+                <div class="flex items-center justify-end gap-2 md:gap-3 flex-wrap">
+                    <span id="weather-icon" class="text-[clamp(2.5rem,5.5vw,4.5rem)] leading-none"></span>
+                    <div id="weather-temp" class="text-[clamp(3rem,7vw,6rem)] font-bold tracking-tighter leading-none">--°</div>
+                </div>
+                <div id="weather-desc" class="text-[clamp(1rem,3vw,2rem)] font-medium mt-1">Fetching weather...</div>
+                <div class="text-[clamp(0.75rem,2vw,1.1rem)] text-gray-200 opacity-80 font-light tracking-wide uppercase">Teaneck, NJ</div>
             </div>
         </div>
 
         <!-- Bottom Section: Time/Date and Daily Forecast -->
-        <div class="flex flex-col xl:flex-row justify-between items-center xl:items-end mb-4 text-shadow-heavy w-full gap-8 xl:gap-4 pb-4 xl:pb-0">
+        <div class="flex flex-wrap justify-between items-end gap-6 md:gap-8 mt-auto text-shadow-heavy w-full">
             
             <!-- Left: Time and Date -->
-            <div class="flex flex-col items-center xl:items-start">
+            <div class="flex-shrink-0">
                 <div class="flex items-baseline gap-2 md:gap-4">
-                    <div id="time" class="text-7xl sm:text-9xl lg:text-[10rem] xl:text-[12rem] font-black leading-none tracking-tight">--:--</div>
-                    <div id="ampm" class="text-2xl sm:text-4xl xl:text-5xl font-bold mb-2 xl:mb-4 opacity-90"></div>
+                    <div id="time" class="text-[clamp(4.5rem,18vw,12rem)] font-black leading-none tracking-tight">--:--</div>
+                    <div id="ampm" class="text-[clamp(1.5rem,6vw,3rem)] font-bold mb-2 md:mb-4 opacity-90"></div>
                 </div>
-                <div id="date" class="text-xl sm:text-3xl xl:text-4xl font-medium mt-2 text-gray-100 xl:pl-2 opacity-90 text-center xl:text-left">---</div>
+                <div id="date" class="text-[clamp(1.25rem,4vw,2.5rem)] font-medium mt-2 text-gray-100 pl-1 md:pl-2 opacity-90">---</div>
             </div>
 
             <!-- Right: Next Few Days Forecast -->
-            <div id="forecast-container" class="flex flex-wrap justify-center xl:justify-end gap-2 sm:gap-4 w-full xl:w-auto">
+            <div id="forecast-container" class="flex flex-wrap justify-end gap-2 md:gap-4 pb-1 md:pb-2">
                 <!-- Forecast items injected via JS -->
             </div>
         </div>
@@ -108,8 +155,8 @@
             try {
                 const lat = 40.8976;
                 const lon = -74.0154;
-                // Added daily forecast parameters (max/min temp and weather code) for 4 days
-                const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min&temperature_unit=fahrenheit&timezone=America%2FNew_York&forecast_days=4`;
+                // Added is_day parameter to accurately determine daylight vs night conditions
+                const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code,is_day&daily=weather_code,temperature_2m_max,temperature_2m_min&temperature_unit=fahrenheit&timezone=America%2FNew_York&forecast_days=4`;
 
                 const response = await fetch(url);
                 const data = await response.json();
@@ -117,11 +164,15 @@
                 if (data && data.current) {
                     const temp = Math.round(data.current.temperature_2m);
                     const code = data.current.weather_code;
+                    const isDay = data.current.is_day !== 0;
                     const weatherInfo = getWeatherDescription(code);
 
                     document.getElementById('weather-temp').textContent = `${temp}°`;
                     document.getElementById('weather-desc').textContent = weatherInfo.text;
                     document.getElementById('weather-icon').textContent = weatherInfo.icon;
+
+                    // Update dynamic background to match weather & day/night cycle
+                    updateDynamicBackground(code, isDay);
                 }
 
                 if (data && data.daily) {
@@ -140,10 +191,10 @@
                         const icon = getWeatherDescription(code).icon;
 
                         const forecastHTML = `
-                            <div class="flex flex-col items-center bg-black/40 rounded-xl p-3 sm:p-4 backdrop-blur-sm border border-white/10 shadow-lg min-w-[80px] sm:min-w-[100px]">
-                                <div class="text-lg sm:text-2xl font-medium text-gray-200 tracking-wide">${dayName}</div>
-                                <div class="text-3xl sm:text-4xl my-2 sm:my-3">${icon}</div>
-                                <div class="text-base sm:text-xl font-bold whitespace-nowrap">${maxTemp}° <span class="text-gray-400 font-normal ml-1">${minTemp}°</span></div>
+                            <div class="flex flex-col items-center bg-black/40 rounded-xl p-[clamp(0.5rem,2vw,1rem)] backdrop-blur-sm border border-white/10 shadow-lg min-w-[70px] md:min-w-[100px]">
+                                <div class="text-[clamp(0.875rem,2.5vw,1.5rem)] font-medium text-gray-200 tracking-wide">${dayName}</div>
+                                <div class="text-[clamp(1.5rem,4vw,2.5rem)] my-1 md:my-3">${icon}</div>
+                                <div class="text-[clamp(0.875rem,3vw,1.25rem)] font-bold whitespace-nowrap">${maxTemp}° <span class="text-gray-400 font-normal ml-1">${minTemp}°</span></div>
                             </div>
                         `;
                         forecastContainer.innerHTML += forecastHTML;
@@ -187,10 +238,63 @@
             return map[code] || { text: 'Unknown', icon: '🌡️' };
         }
 
+        /**
+         * Selects a curated high-res wallpaper depending on current weather condition and daylight.
+         */
+        function updateDynamicBackground(code, isDay) {
+            const bgElement = document.getElementById('bg-image');
+            
+            // Image library mapped to weather types and day/night
+            const backgrounds = {
+                thunder: 'https://images.unsplash.com/photo-1605721911519-3dfeb3be25e7?q=80&w=1920&auto=format&fit=crop',
+                rain: 'https://images.unsplash.com/photo-1534274988757-a28bf1a57c17?q=80&w=1920&auto=format&fit=crop',
+                snow: 'https://images.unsplash.com/photo-1491002052546-bf38f186af56?q=80&w=1920&auto=format&fit=crop',
+                fog: 'https://images.unsplash.com/photo-1487621167305-5d248087c724?q=80&w=1920&auto=format&fit=crop',
+                clearDay: 'https://images.unsplash.com/photo-1506744626753-1fa44df31c28?q=80&w=1920&auto=format&fit=crop',
+                clearNight: 'https://images.unsplash.com/photo-1509773896068-7fd415d91e2e?q=80&w=1920&auto=format&fit=crop',
+                cloudyDay: 'https://images.unsplash.com/photo-1534088568595-a066f410bcda?q=80&w=1920&auto=format&fit=crop',
+                cloudyNight: 'https://images.unsplash.com/photo-1532978379173-523e16f371f2?q=80&w=1920&auto=format&fit=crop'
+            };
+
+            let chosenUrl = backgrounds.clearDay;
+
+            if ([95, 96, 99].includes(code)) {
+                chosenUrl = backgrounds.thunder;
+            } else if ([51, 53, 55, 61, 63, 65, 80, 81, 82].includes(code)) {
+                chosenUrl = backgrounds.rain;
+            } else if ([71, 73, 75, 77].includes(code)) {
+                chosenUrl = backgrounds.snow;
+            } else if ([45, 48].includes(code)) {
+                chosenUrl = backgrounds.fog;
+            } else if ([1, 2, 3].includes(code)) {
+                chosenUrl = isDay ? backgrounds.cloudyDay : backgrounds.cloudyNight;
+            } else {
+                chosenUrl = isDay ? backgrounds.clearDay : backgrounds.clearNight;
+            }
+
+            if (bgElement.src !== chosenUrl) {
+                bgElement.src = chosenUrl;
+            }
+        }
+
+        /**
+         * Simulates progress and demo updates for the Now Playing widget.
+         * Ready to be replaced by a fetch() call to Spotify Web API, Home Assistant, or WebSockets.
+         */
+        function initMediaProgress() {
+            let progress = 58;
+            setInterval(() => {
+                progress = (progress + 0.5) % 100;
+                const bar = document.getElementById('media-progress');
+                if (bar) bar.style.width = `${progress}%`;
+            }, 1000);
+        }
+
         // Initialization
         updateTime();
         setInterval(updateTime, 1000); // Keep time ticking every second
         fetchWeather(); // Fetch weather on load (which happens every 30s due to meta tag)
+        initMediaProgress();
     </script>
 </body>
 </html>
