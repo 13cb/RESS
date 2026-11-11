@@ -36,7 +36,7 @@
 
     <!-- High-quality landscape background from Unsplash -->
     <img 
-        src="https://placehold.co/80x1920" 
+        src="https://images.unsplash.com/photo-1506744012022-28d015cadaa2?q=80&w=1920&auto=format&fit=crop" 
         alt="Landscape Background" 
         class="absolute inset-0 w-full h-full object-cover z-0" 
     />
@@ -47,7 +47,7 @@
     <!-- Main Content Container -->
     <div class="relative z-20 flex flex-col justify-between h-full p-10 md:p-16">
         
-        <!-- Top Section: Weather Widget (Teaneck, NJ) -->
+        <!-- Top Section: Current Weather Widget (Teaneck, NJ) -->
         <div class="flex justify-end w-full">
             <div class="text-right text-shadow-heavy">
                 <div class="flex items-center justify-end gap-3">
@@ -59,13 +59,22 @@
             </div>
         </div>
 
-        <!-- Bottom Section: Time and Date -->
-        <div class="mb-4 text-shadow-heavy">
-            <div class="flex items-baseline gap-4">
-                <div id="time" class="text-[12rem] font-black leading-none tracking-tight">--:--</div>
-                <div id="ampm" class="text-5xl font-bold mb-4 opacity-90"></div>
+        <!-- Bottom Section: Time/Date and Daily Forecast -->
+        <div class="flex justify-between items-end mb-4 text-shadow-heavy w-full">
+            
+            <!-- Left: Time and Date -->
+            <div>
+                <div class="flex items-baseline gap-4">
+                    <div id="time" class="text-[12rem] font-black leading-none tracking-tight">--:--</div>
+                    <div id="ampm" class="text-5xl font-bold mb-4 opacity-90"></div>
+                </div>
+                <div id="date" class="text-4xl font-medium mt-2 text-gray-100 pl-2 opacity-90">---</div>
             </div>
-            <div id="date" class="text-4xl font-medium mt-2 text-gray-100 pl-2 opacity-90">---</div>
+
+            <!-- Right: Next Few Days Forecast -->
+            <div id="forecast-container" class="flex gap-4 pb-2">
+                <!-- Forecast items injected via JS -->
+            </div>
         </div>
 
     </div>
@@ -92,14 +101,15 @@
         }
 
         /**
-         * Fetches current weather data from the free Open-Meteo API.
+         * Fetches current weather and daily forecast data from the free Open-Meteo API.
          * Default Coordinates: Teaneck, NJ (40.8976, -74.0154)
          */
         async function fetchWeather() {
             try {
                 const lat = 40.8976;
                 const lon = -74.0154;
-                const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code&temperature_unit=fahrenheit`;
+                // Added daily forecast parameters (max/min temp and weather code) for 4 days
+                const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min&temperature_unit=fahrenheit&timezone=America%2FNew_York&forecast_days=4`;
 
                 const response = await fetch(url);
                 const data = await response.json();
@@ -113,6 +123,33 @@
                     document.getElementById('weather-desc').textContent = weatherInfo.text;
                     document.getElementById('weather-icon').textContent = weatherInfo.icon;
                 }
+
+                if (data && data.daily) {
+                    const forecastContainer = document.getElementById('forecast-container');
+                    forecastContainer.innerHTML = '';
+                    
+                    // Loop through the next 3 days (indices 1, 2, 3)
+                    for(let i = 1; i < 4; i++) {
+                        const dateStr = data.daily.time[i];
+                        // Append time to ensure local timezone parsing doesn't shift the day
+                        const dateObj = new Date(dateStr + "T00:00:00");
+                        const dayName = dateObj.toLocaleDateString('en-US', { weekday: 'short' });
+                        const maxTemp = Math.round(data.daily.temperature_2m_max[i]);
+                        const minTemp = Math.round(data.daily.temperature_2m_min[i]);
+                        const code = data.daily.weather_code[i];
+                        const icon = getWeatherDescription(code).icon;
+
+                        const forecastHTML = `
+                            <div class="flex flex-col items-center bg-black/40 rounded-xl p-4 backdrop-blur-sm border border-white/10 shadow-lg">
+                                <div class="text-2xl font-medium text-gray-200 tracking-wide">${dayName}</div>
+                                <div class="text-4xl my-3">${icon}</div>
+                                <div class="text-xl font-bold whitespace-nowrap">${maxTemp}° <span class="text-gray-400 font-normal ml-1">${minTemp}°</span></div>
+                            </div>
+                        `;
+                        forecastContainer.innerHTML += forecastHTML;
+                    }
+                }
+
             } catch (error) {
                 console.error('Failed to fetch weather data:', error);
                 document.getElementById('weather-desc').textContent = 'Weather Unavailable';
