@@ -45,34 +45,34 @@
     <div class="absolute inset-0 bg-gradient-to-b from-black/30 via-black/10 to-black/60 z-10 pointer-events-none"></div>
 
     <!-- Main Content Container -->
-    <div class="relative z-20 flex flex-col justify-between h-full p-10 md:p-16">
+    <div class="relative z-20 flex flex-col justify-between h-full p-6 sm:p-10 md:p-16 overflow-y-auto md:overflow-hidden">
         
         <!-- Top Section: Current Weather Widget (Teaneck, NJ) -->
-        <div class="flex justify-end w-full">
-            <div class="text-right text-shadow-heavy">
-                <div class="flex items-center justify-end gap-3">
-                    <span id="weather-icon" class="text-5xl"></span>
-                    <div id="weather-temp" class="text-7xl font-bold tracking-tighter">--°</div>
+        <div class="flex justify-center md:justify-end w-full pt-4 md:pt-0">
+            <div class="text-center md:text-right text-shadow-heavy">
+                <div class="flex items-center justify-center md:justify-end gap-2 md:gap-3">
+                    <span id="weather-icon" class="text-4xl sm:text-5xl lg:text-6xl"></span>
+                    <div id="weather-temp" class="text-5xl sm:text-7xl lg:text-8xl font-bold tracking-tighter">--°</div>
                 </div>
-                <div id="weather-desc" class="text-3xl font-medium mt-2">Fetching weather...</div>
-                <div class="text-xl text-gray-200 mt-1 opacity-80 font-light tracking-wide uppercase">Teaneck, NJ</div>
+                <div id="weather-desc" class="text-xl sm:text-2xl lg:text-3xl font-medium mt-1 md:mt-2">Fetching weather...</div>
+                <div class="text-sm sm:text-lg lg:text-xl text-gray-200 mt-1 opacity-80 font-light tracking-wide uppercase">Teaneck, NJ</div>
             </div>
         </div>
 
         <!-- Bottom Section: Time/Date and Daily Forecast -->
-        <div class="flex justify-between items-end mb-4 text-shadow-heavy w-full">
+        <div class="flex flex-col xl:flex-row justify-between items-center xl:items-end mb-4 text-shadow-heavy w-full gap-8 xl:gap-4 pb-4 xl:pb-0">
             
             <!-- Left: Time and Date -->
-            <div>
-                <div class="flex items-baseline gap-4">
-                    <div id="time" class="text-[12rem] font-black leading-none tracking-tight">--:--</div>
-                    <div id="ampm" class="text-5xl font-bold mb-4 opacity-90"></div>
+            <div class="flex flex-col items-center xl:items-start">
+                <div class="flex items-baseline gap-2 md:gap-4">
+                    <div id="time" class="text-7xl sm:text-9xl lg:text-[10rem] xl:text-[12rem] font-black leading-none tracking-tight">--:--</div>
+                    <div id="ampm" class="text-2xl sm:text-4xl xl:text-5xl font-bold mb-2 xl:mb-4 opacity-90"></div>
                 </div>
-                <div id="date" class="text-4xl font-medium mt-2 text-gray-100 pl-2 opacity-90">---</div>
+                <div id="date" class="text-xl sm:text-3xl xl:text-4xl font-medium mt-2 text-gray-100 xl:pl-2 opacity-90 text-center xl:text-left">---</div>
             </div>
 
             <!-- Right: Next Few Days Forecast -->
-            <div id="forecast-container" class="flex gap-4 pb-2">
+            <div id="forecast-container" class="flex flex-wrap justify-center xl:justify-end gap-2 sm:gap-4 w-full xl:w-auto">
                 <!-- Forecast items injected via JS -->
             </div>
         </div>
@@ -140,10 +140,10 @@
                         const icon = getWeatherDescription(code).icon;
 
                         const forecastHTML = `
-                            <div class="flex flex-col items-center bg-black/40 rounded-xl p-4 backdrop-blur-sm border border-white/10 shadow-lg">
-                                <div class="text-2xl font-medium text-gray-200 tracking-wide">${dayName}</div>
-                                <div class="text-4xl my-3">${icon}</div>
-                                <div class="text-xl font-bold whitespace-nowrap">${maxTemp}° <span class="text-gray-400 font-normal ml-1">${minTemp}°</span></div>
+                            <div class="flex flex-col items-center bg-black/40 rounded-xl p-3 sm:p-4 backdrop-blur-sm border border-white/10 shadow-lg min-w-[80px] sm:min-w-[100px]">
+                                <div class="text-lg sm:text-2xl font-medium text-gray-200 tracking-wide">${dayName}</div>
+                                <div class="text-3xl sm:text-4xl my-2 sm:my-3">${icon}</div>
+                                <div class="text-base sm:text-xl font-bold whitespace-nowrap">${maxTemp}° <span class="text-gray-400 font-normal ml-1">${minTemp}°</span></div>
                             </div>
                         `;
                         forecastContainer.innerHTML += forecastHTML;
