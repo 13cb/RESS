@@ -131,7 +131,7 @@
                 <div id="weather-desc" class="text-[clamp(1rem,3vw,2rem)] font-medium mt-1">Loading weather...</div>
                 <div class="flex items-center justify-end gap-1.5 text-[clamp(0.75rem,2vw,1.1rem)] text-gray-200 opacity-80 font-light tracking-wide uppercase">
                     <span id="offline-indicator" class="hidden text-amber-400 font-bold" title="Cached data">(Cached)</span>
-                    <span>Teaneck, NJ</span>
+                    <span id="weather-location">Teaneck, NJ</span>
                 </div>
             </section>
         </header>
@@ -163,29 +163,52 @@
 
     <script>
         /**
-         * Configuration & Constants
+         * =====================================================================
+         * USER CONFIGURATION (Edit all dashboard settings here)
+         * =====================================================================
          */
         const CONFIG = {
+            // Location & Weather Settings
+            LOCATION_NAME: 'Teaneck, NJ',
             LAT: 40.8976,
             LON: -74.0154,
-            TIMEZONE: 'America/New_York',
-            WEATHER_INTERVAL_MS: 10 * 60 * 1000, // 10 minutes
-            FETCH_TIMEOUT_MS: 8000,              // 8-second fetch timeout
-            STORAGE_KEY: 'echo_dashboard_weather_cache'
-        };
+            TEMP_UNIT: 'fahrenheit',          // 'fahrenheit' or 'celsius'
+            FORECAST_DAYS: 3,                 // Number of upcoming forecast days to display (1–6)
 
-        /**
-         * Curated Wallpaper Library
-         */
-        const BACKGROUNDS = {
-            thunder: 'https://images.unsplash.com/photo-1605721911519-3dfeb3be25e7?q=80&w=1920&auto=format&fit=crop',
-            rain: 'https://images.unsplash.com/photo-1534274988757-a28bf1a57c17?q=80&w=1920&auto=format&fit=crop',
-            snow: 'https://images.unsplash.com/photo-1491002052546-bf38f186af56?q=80&w=1920&auto=format&fit=crop',
-            fog: 'https://images.unsplash.com/photo-1487621167305-5d248087c724?q=80&w=1920&auto=format&fit=crop',
-            clearDay: 'https://images.unsplash.com/photo-1506744626753-1fa44df31c28?q=80&w=1920&auto=format&fit=crop',
-            clearNight: 'https://images.unsplash.com/photo-1509773896068-7fd415d91e2e?q=80&w=1920&auto=format&fit=crop',
-            cloudyDay: 'https://images.unsplash.com/photo-1534088568595-a066f410bcda?q=80&w=1920&auto=format&fit=crop',
-            cloudyNight: 'https://images.unsplash.com/photo-1532978379173-523e16f371f2?q=80&w=1920&auto=format&fit=crop'
+            // Time & Locale Settings
+            LOCALE: 'en-US',
+            TIMEZONE: 'America/New_York',
+            USE_24_HOUR: false,               // true for 24-hour format (17:30), false for 12-hour (5:30 PM)
+
+            // Refresh & Network Resilience Settings
+            CLOCK_INTERVAL_MS: 1000,          // Clock update frequency (1 second)
+            WEATHER_INTERVAL_MS: 10 * 60 * 1000, // Weather API refresh interval (10 minutes)
+            FETCH_TIMEOUT_MS: 8000,           // AbortController timeout (8 seconds)
+            STORAGE_KEY: 'echo_dashboard_weather_cache',
+
+            // Default Media Player Widget Settings
+            MEDIA: {
+                ENABLED: true,                // Set false to hide the media widget entirely
+                IS_PLAYING: true,
+                TITLE: 'Midnight City',
+                ARTIST: 'M83',
+                ARTWORK_URL: 'https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?q=80&w=300&auto=format&fit=crop',
+                DURATION_SECONDS: 243,        // Total track length in seconds (4m 03s)
+                INITIAL_PROGRESS_PERCENT: 58  // Starting progress bar percentage
+            },
+
+            // Dynamic Weather & Time-of-Day Background Wallpapers
+            BACKGROUNDS: {
+                DEFAULT: 'https://images.unsplash.com/photo-1506744626753-1fa44df31c28?q=80&w=1920&auto=format&fit=crop',
+                THUNDER: 'https://images.unsplash.com/photo-1605721911519-3dfeb3be25e7?q=80&w=1920&auto=format&fit=crop',
+                RAIN: 'https://images.unsplash.com/photo-1534274988757-a28bf1a57c17?q=80&w=1920&auto=format&fit=crop',
+                SNOW: 'https://images.unsplash.com/photo-1491002052546-bf38f186af56?q=80&w=1920&auto=format&fit=crop',
+                FOG: 'https://images.unsplash.com/photo-1487621167305-5d248087c724?q=80&w=1920&auto=format&fit=crop',
+                CLEAR_DAY: 'https://images.unsplash.com/photo-1506744626753-1fa44df31c28?q=80&w=1920&auto=format&fit=crop',
+                CLEAR_NIGHT: 'https://images.unsplash.com/photo-1509773896068-7fd415d91e2e?q=80&w=1920&auto=format&fit=crop',
+                CLOUDY_DAY: 'https://images.unsplash.com/photo-1534088568595-a066f410bcda?q=80&w=1920&auto=format&fit=crop',
+                CLOUDY_NIGHT: 'https://images.unsplash.com/photo-1532978379173-523e16f371f2?q=80&w=1920&auto=format&fit=crop'
+            }
         };
 
         /**
@@ -198,7 +221,9 @@
             weatherTemp: document.getElementById('weather-temp'),
             weatherDesc: document.getElementById('weather-desc'),
             weatherIcon: document.getElementById('weather-icon'),
+            weatherLocation: document.getElementById('weather-location'),
             offlineIndicator: document.getElementById('offline-indicator'),
+            forecastSection: document.getElementById('forecast-section'),
             forecastContainer: document.getElementById('forecast-container'),
             bgLayer1: document.getElementById('bg-layer-1'),
             bgLayer2: document.getElementById('bg-layer-2'),
@@ -215,25 +240,28 @@
 
         // Track active background layer for cross-fades
         let activeBgLayer = 1;
-        let currentBgUrl = '';
+        let currentBgUrl = CONFIG.BACKGROUNDS.DEFAULT;
 
         /**
-         * Intl formatters for consistent, localized date & time rendering
+         * Intl formatters driven by CONFIG locale, timezone, and 12/24-hour preference
          */
-        const timeFormatter = new Intl.DateTimeFormat('en-US', {
-            hour: 'numeric',
+        const timeFormatter = new Intl.DateTimeFormat(CONFIG.LOCALE, {
+            hour: CONFIG.USE_24_HOUR ? '2-digit' : 'numeric',
             minute: '2-digit',
-            hour12: true
+            hour12: !CONFIG.USE_24_HOUR,
+            timeZone: CONFIG.TIMEZONE
         });
 
-        const dateFormatter = new Intl.DateTimeFormat('en-US', {
+        const dateFormatter = new Intl.DateTimeFormat(CONFIG.LOCALE, {
             weekday: 'long',
             month: 'long',
-            day: 'numeric'
+            day: 'numeric',
+            timeZone: CONFIG.TIMEZONE
         });
 
-        const weekdayFormatter = new Intl.DateTimeFormat('en-US', {
-            weekday: 'short'
+        const weekdayFormatter = new Intl.DateTimeFormat(CONFIG.LOCALE, {
+            weekday: 'short',
+            timeZone: CONFIG.TIMEZONE
         });
 
         /**
@@ -279,7 +307,8 @@
             const dayPeriod = timeParts.find(p => p.type === 'dayPeriod')?.value || '';
 
             DOM.time.textContent = `${hour}:${minute}`;
-            DOM.ampm.textContent = dayPeriod;
+            DOM.ampm.textContent = CONFIG.USE_24_HOUR ? '' : dayPeriod;
+            DOM.ampm.classList.toggle('hidden', CONFIG.USE_24_HOUR);
             DOM.date.textContent = dateFormatter.format(now);
         }
 
@@ -316,20 +345,21 @@
          * 3. Selects contextual wallpaper based on condition and daylight
          */
         function updateBackground(code, isDay) {
-            let targetUrl = BACKGROUNDS.clearDay;
+            const bg = CONFIG.BACKGROUNDS;
+            let targetUrl = bg.CLEAR_DAY;
 
             if ([95, 96, 99].includes(code)) {
-                targetUrl = BACKGROUNDS.thunder;
+                targetUrl = bg.THUNDER;
             } else if ([51, 53, 55, 61, 63, 65, 80, 81, 82].includes(code)) {
-                targetUrl = BACKGROUNDS.rain;
+                targetUrl = bg.RAIN;
             } else if ([71, 73, 75, 77].includes(code)) {
-                targetUrl = BACKGROUNDS.snow;
+                targetUrl = bg.SNOW;
             } else if ([45, 48].includes(code)) {
-                targetUrl = BACKGROUNDS.fog;
+                targetUrl = bg.FOG;
             } else if ([1, 2, 3].includes(code)) {
-                targetUrl = isDay ? BACKGROUNDS.cloudyDay : BACKGROUNDS.cloudyNight;
+                targetUrl = isDay ? bg.CLOUDY_DAY : bg.CLOUDY_NIGHT;
             } else {
-                targetUrl = isDay ? BACKGROUNDS.clearDay : BACKGROUNDS.clearNight;
+                targetUrl = isDay ? bg.CLEAR_DAY : bg.CLEAR_NIGHT;
             }
 
             preloadAndSwapBackground(targetUrl);
@@ -360,7 +390,7 @@
         }
 
         /**
-         * 5. Renders 3-day forecast with bounds checking and single innerHTML assignment
+         * 5. Renders forecast days based on CONFIG.FORECAST_DAYS
          */
         function renderForecast(daily) {
             if (!daily || !Array.isArray(daily.time) || daily.time.length < 2) {
@@ -369,7 +399,7 @@
             }
 
             let forecastHtml = '';
-            const maxDays = Math.min(4, daily.time.length);
+            const maxDays = Math.min(CONFIG.FORECAST_DAYS + 1, daily.time.length);
 
             for (let i = 1; i < maxDays; i++) {
                 const dateStr = daily.time[i];
@@ -406,7 +436,9 @@
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), CONFIG.FETCH_TIMEOUT_MS);
 
-            const url = `https://api.open-meteo.com/v1/forecast?latitude=${CONFIG.LAT}&longitude=${CONFIG.LON}&current=temperature_2m,weather_code,is_day&daily=weather_code,temperature_2m_max,temperature_2m_min&temperature_unit=fahrenheit&timezone=${encodeURIComponent(CONFIG.TIMEZONE)}&forecast_days=4`;
+            // Request today + CONFIG.FORECAST_DAYS upcoming days (clamped to Open-Meteo's 16-day max)
+            const apiForecastDays = Math.min(16, Math.max(2, CONFIG.FORECAST_DAYS + 1));
+            const url = `https://api.open-meteo.com/v1/forecast?latitude=${CONFIG.LAT}&longitude=${CONFIG.LON}&current=temperature_2m,weather_code,is_day&daily=weather_code,temperature_2m_max,temperature_2m_min&temperature_unit=${encodeURIComponent(CONFIG.TEMP_UNIT)}&timezone=${encodeURIComponent(CONFIG.TIMEZONE)}&forecast_days=${apiForecastDays}`;
 
             try {
                 const response = await fetch(url, { signal: controller.signal });
@@ -416,9 +448,10 @@
                 const data = await response.json();
 
                 if (data && data.current) {
-                    // Update cache
+                    // Store cache alongside config signature so changing units/coords invalidates stale cache
                     localStorage.setItem(CONFIG.STORAGE_KEY, JSON.stringify({
                         data,
+                        configSignature: `${CONFIG.LAT},${CONFIG.LON},${CONFIG.TEMP_UNIT},${CONFIG.FORECAST_DAYS}`,
                         timestamp: Date.now()
                     }));
 
@@ -428,12 +461,13 @@
             } catch (error) {
                 console.warn('Weather fetch failed, falling back to cache:', error);
                 
-                // Fallback to cache
+                // Fallback to cache if it matches current location/unit settings
                 const cachedRaw = localStorage.getItem(CONFIG.STORAGE_KEY);
                 if (cachedRaw) {
                     try {
                         const cached = JSON.parse(cachedRaw);
-                        if (cached && cached.data) {
+                        const currentSignature = `${CONFIG.LAT},${CONFIG.LON},${CONFIG.TEMP_UNIT},${CONFIG.FORECAST_DAYS}`;
+                        if (cached && cached.data && cached.configSignature === currentSignature) {
                             renderWeather(cached.data.current, true);
                             renderForecast(cached.data.daily);
                             return;
@@ -455,6 +489,13 @@
         let mediaInterval = null;
 
         function setMediaState(mediaData) {
+            if (!CONFIG.MEDIA.ENABLED) {
+                DOM.mediaWidget.classList.add('hidden');
+                if (mediaInterval) clearInterval(mediaInterval);
+                return;
+            }
+            DOM.mediaWidget.classList.remove('hidden');
+
             if (!mediaData || !mediaData.isPlaying) {
                 // Idle / Disconnected State
                 DOM.mediaTitle.textContent = 'No media playing';
@@ -487,11 +528,15 @@
                 DOM.mediaArtFallback.classList.remove('hidden');
             }
 
-            // Simulate progress track loop
+            // Progress track loop based on CONFIG.MEDIA.DURATION_SECONDS
             let progress = mediaData.initialProgress || 0;
+            const durationSec = Math.max(1, mediaData.durationSeconds || 240);
+            const stepPerSecond = 100 / durationSec;
+            DOM.mediaProgress.style.width = `${progress}%`;
+
             if (mediaInterval) clearInterval(mediaInterval);
             mediaInterval = setInterval(() => {
-                progress = (progress + 0.4) % 100;
+                progress = (progress + stepPerSecond) % 100;
                 DOM.mediaProgress.style.width = `${progress}%`;
             }, 1000);
         }
@@ -500,21 +545,27 @@
          * Initialization Lifecycle
          */
         function initDashboard() {
-            // Clock tick every second
-            updateClock();
-            setInterval(updateClock, 1000);
+            // Apply configured location label, initial background, and forecast aria-label
+            DOM.weatherLocation.textContent = CONFIG.LOCATION_NAME;
+            DOM.bgLayer1.src = CONFIG.BACKGROUNDS.DEFAULT;
+            DOM.forecastSection.setAttribute('aria-label', `${CONFIG.FORECAST_DAYS}-day weather forecast`);
 
-            // Fetch weather immediately, then every 10 minutes without page reloads
+            // Clock tick based on CONFIG.CLOCK_INTERVAL_MS
+            updateClock();
+            setInterval(updateClock, CONFIG.CLOCK_INTERVAL_MS);
+
+            // Fetch weather immediately, then per CONFIG.WEATHER_INTERVAL_MS without page reloads
             fetchWeather();
             setInterval(fetchWeather, CONFIG.WEATHER_INTERVAL_MS);
 
-            // Initialize media state (can be wired to Spotify Web API, Home Assistant, or WebSockets)
+            // Initialize media state from CONFIG.MEDIA
             setMediaState({
-                isPlaying: true,
-                title: 'Midnight City',
-                artist: 'M83',
-                artworkUrl: 'https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?q=80&w=300&auto=format&fit=crop',
-                initialProgress: 58
+                isPlaying: CONFIG.MEDIA.IS_PLAYING,
+                title: CONFIG.MEDIA.TITLE,
+                artist: CONFIG.MEDIA.ARTIST,
+                artworkUrl: CONFIG.MEDIA.ARTWORK_URL,
+                durationSeconds: CONFIG.MEDIA.DURATION_SECONDS,
+                initialProgress: CONFIG.MEDIA.INITIAL_PROGRESS_PERCENT
             });
         }
 
