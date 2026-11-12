@@ -5,891 +5,1004 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Echo Show Dashboard</title>
     
-    <!-- Tailwind CSS for rapid styling -->
+    <!-- Tailwind CSS for responsive layout & styling -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Tone.js for gentle synthesized timer chimes without external audio files -->
+    
+    <!-- Tone.js for gentle kitchen timer chimes & synthesized ambient soundscapes -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
     
     <style>
-        /* 1. CSS Imports placed at the very top of style block */
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&display=swap');
+        /* @import placed first per CSS specification, paired with native system fallback stack */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;500;700;900&display=swap');
 
-        /* 2. System Fallback Font Stack */
+        :root {
+            --font-primary: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            --night-brightness: 1;
+            --night-sepia: 0;
+        }
+
         body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background-color: #0b0f17;
+            font-family: var(--font-primary);
+            filter: brightness(var(--night-brightness)) sepia(var(--night-sepia));
+            transition: filter 1.5s ease-in-out;
         }
 
-        /* Heavy text shadow for high contrast over any background wallpaper */
+        /* Custom text shadow for extreme legibility over variable background photography */
         .text-shadow-heavy {
-            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.85), 0 0 35px rgba(0, 0, 0, 0.7);
+            text-shadow: 0 4px 14px rgba(0, 0, 0, 0.8), 0 0 40px rgba(0, 0, 0, 0.65);
         }
 
-        /* Cross-fading background layer styling */
+        /* Cross-fading background layers for flicker-free wallpaper transitions */
         .bg-layer {
             position: absolute;
             inset: 0;
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
             transition: opacity 1.2s ease-in-out;
             will-change: opacity;
         }
 
-        /* Smooth Pixel-Shift & Night Dimming transitions */
-        #dashboard-root {
-            transition: filter 1.5s ease-in-out;
-        }
-        #main-content {
+        /* Pixel-shift container for OLED/LCD burn-in prevention */
+        #burn-in-shifter {
             transition: transform 2s ease-in-out;
             will-change: transform;
         }
 
-        /* 3. Reduced Motion accessibility overrides */
+        /* Night mode helper: hides non-essential clutter during sleep hours */
+        body.is-night-mode .night-hide {
+            opacity: 0 !important;
+            pointer-events: none !important;
+            transition: opacity 1s ease;
+        }
+
+        /* Respect OS reduced-motion preferences */
         @media (prefers-reduced-motion: reduce) {
-            .bg-layer, #dashboard-root, #main-content {
-                transition: none !important;
-            }
-            * {
+            *, *::before, *::after {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
                 transition-duration: 0.01ms !important;
             }
         }
     </style>
 </head>
-<body class="h-screen w-screen overflow-hidden text-white bg-black select-none">
+<body class="h-screen w-screen overflow-hidden text-white bg-neutral-950 select-none">
 
-    <!-- Root wrapper for Auto Night Mode brightness & warmth filter -->
-    <div id="dashboard-root" class="relative h-full w-full overflow-hidden">
+    <!-- Dual Background Layers for Preloaded Cross-Fade Transitions -->
+    <div id="bg-layer-1" class="bg-layer opacity-100 z-0" aria-hidden="true"></div>
+    <div id="bg-layer-2" class="bg-layer opacity-0 z-0" aria-hidden="true"></div>
 
-        <!-- Preloaded dual-layer cross-fading background -->
-        <div id="bg-container" class="absolute inset-0 z-0 overflow-hidden bg-gradient-to-br from-slate-900 via-gray-900 to-black">
-            <img id="bg-layer-1" class="bg-layer opacity-100 scale-105" alt="Dynamic weather wallpaper 1" src="https://images.unsplash.com/photo-1506744626753-1fa44df31c28?q=80&w=1920&auto=format&fit=crop" />
-            <img id="bg-layer-2" class="bg-layer opacity-0 scale-105" alt="Dynamic weather wallpaper 2" src="" />
-        </div>
+    <!-- Translucent Gradient Overlay for Legibility -->
+    <div class="absolute inset-0 bg-gradient-to-b from-black/45 via-black/15 to-black/75 z-10 pointer-events-none" aria-hidden="true"></div>
 
-        <!-- Gradient overlay ensuring maximum readability in any lighting condition -->
-        <div class="absolute inset-0 bg-gradient-to-b from-black/55 via-black/25 to-black/80 z-10 pointer-events-none"></div>
+    <!-- Double-Tap Pure Blackout / Sleep Screen Overlay -->
+    <div id="blackout-overlay" class="fixed inset-0 bg-black z-50 hidden flex flex-col items-center justify-center cursor-pointer" aria-label="Screen blacked out. Tap to wake.">
+        <span class="text-white/15 text-xs tracking-widest uppercase select-none">Tap screen to wake</span>
+    </div>
 
-        <!-- Main Content Container (receives subtle pixel-shift offsets) -->
-        <main id="main-content" class="relative z-20 flex flex-col justify-between h-full p-[clamp(1rem,3.5vw,3rem)]">
+    <!-- Pixel-Shift Wrapper (Moves slightly every 15 mins to prevent screen burn-in) -->
+    <div id="burn-in-shifter" class="relative z-20 h-full w-full">
+
+        <!-- Main Dashboard Container -->
+        <main class="flex flex-col justify-between h-full w-full p-5 sm:p-8 md:p-12 lg:p-16">
             
-            <!-- TOP ROW: Active Timer Pill & Current Weather -->
-            <header class="flex flex-row justify-between items-start w-full gap-4">
+            <!-- TOP ROW: Active Timer Pill (Left) & Current Weather + Environment Pills (Right) -->
+            <header class="flex flex-col sm:flex-row justify-between items-start gap-4 w-full">
                 
-                <!-- Left Top Stack: Active Kitchen Timer Pill -->
-                <div class="flex flex-col gap-2.5 items-start">
-                    <!-- Active Timer Banner (Appears when a timer is running or ringing) -->
-                    <div id="active-timer-pill" 
-                         class="hidden flex items-center gap-3 bg-amber-500/20 border border-amber-400/40 backdrop-blur-md rounded-2xl px-3.5 py-2 shadow-xl"
-                         aria-live="assertive">
-                        <span class="text-lg" aria-hidden="true">⏲️</span>
+                <!-- Top-Left: Active Kitchen / Focus Timer Pill (Hidden until a timer is started) -->
+                <div class="flex flex-col gap-2">
+                    <div id="active-timer-card" aria-live="polite" class="hidden flex items-center gap-3 bg-amber-500/25 backdrop-blur-md border border-amber-400/40 rounded-2xl px-4 py-2.5 shadow-xl">
+                        <span class="text-2xl animate-pulse" aria-hidden="true">⏲️</span>
                         <div>
-                            <div id="timer-label" class="text-[10px] uppercase tracking-wider text-amber-300 font-semibold">Timer</div>
-                            <div id="timer-countdown" class="text-lg sm:text-xl font-black tracking-tight tabular-nums leading-none">00:00</div>
+                            <div class="text-[10px] uppercase tracking-wider text-amber-200 font-bold">Active Timer</div>
+                            <div id="timer-display" class="text-2xl sm:text-3xl font-black tracking-tight text-white tabular-nums">00:00</div>
                         </div>
-                        <button id="timer-cancel-btn" 
-                                type="button"
-                                class="ml-1 px-2.5 py-1.5 rounded-xl bg-white/15 hover:bg-white/25 active:scale-95 text-xs font-semibold transition"
-                                aria-label="Stop or cancel timer">
-                            Stop
+                        <button id="cancel-timer-btn" type="button" class="ml-2 bg-black/40 hover:bg-black/60 active:scale-95 text-white/90 text-xs font-semibold px-2.5 py-1.5 rounded-lg transition">
+                            Cancel
                         </button>
                     </div>
                 </div>
 
-                <!-- Current Weather & Environmental Widget -->
-                <section id="current-weather" 
-                         class="text-right text-shadow-heavy flex-shrink-0"
-                         aria-label="Current Weather Information" 
-                         aria-live="polite">
-                    <div class="flex items-center justify-end gap-2 md:gap-3 flex-wrap">
-                        <span id="weather-icon" class="text-[clamp(2.5rem,5.5vw,4.5rem)] leading-none" aria-hidden="true">⛅</span>
-                        <div id="weather-temp" class="text-[clamp(3rem,7vw,6rem)] font-bold tracking-tighter leading-none">--°</div>
+                <!-- Top-Right: Current Weather, Environmental Pills & Next-Hour Rain Timeline -->
+                <section id="weather-section" aria-label="Current Weather" aria-live="polite" class="self-end text-right text-shadow-heavy ml-auto max-w-full">
+                    <div class="flex items-center justify-end gap-2 sm:gap-3">
+                        <span id="weather-icon" class="text-[clamp(2rem,5vw,3.5rem)]" aria-hidden="true">🌡️</span>
+                        <div id="weather-temp" class="text-[clamp(2.75rem,7vw,4.75rem)] font-bold tracking-tighter leading-none">--°</div>
                     </div>
-                    <div id="weather-desc" class="text-[clamp(1rem,3vw,2rem)] font-medium mt-1">Loading weather...</div>
+                    <div id="weather-desc" class="text-[clamp(1rem,2.8vw,1.75rem)] font-medium mt-1">Loading weather...</div>
                     
-                    <!-- Actionable Weather Metrics (Feels Like, Rain %, UV, AQI, Sun Countdown) -->
-                    <div id="weather-metrics" class="night-hide flex flex-wrap items-center justify-end gap-1.5 mt-1.5 text-[11px] sm:text-xs font-medium text-gray-100">
-                        <span id="metric-feels" class="bg-black/40 backdrop-blur-sm border border-white/10 rounded-full px-2.5 py-0.5">Feels --°</span>
-                        <span id="metric-rain" class="bg-black/40 backdrop-blur-sm border border-white/10 rounded-full px-2.5 py-0.5">💧 --%</span>
-                        <span id="metric-uv" class="bg-black/40 backdrop-blur-sm border border-white/10 rounded-full px-2.5 py-0.5">☀️ UV --</span>
-                        <span id="metric-aqi" class="bg-black/40 backdrop-blur-sm border border-white/10 rounded-full px-2.5 py-0.5">🍃 AQI --</span>
-                        <span id="metric-sun" class="bg-black/40 backdrop-blur-sm border border-white/10 rounded-full px-2.5 py-0.5">🌅 --</span>
+                    <!-- Actionable Environmental Pills: Feels Like, Rain %, UV, AQI, Sun & Moon -->
+                    <div class="night-hide flex flex-wrap items-center justify-end gap-1.5 mt-2">
+                        <span id="pill-feels" class="bg-black/40 backdrop-blur-md border border-white/15 rounded-full px-2.5 py-0.5 text-xs font-medium text-gray-100">Feels --°</span>
+                        <span id="pill-rain" class="bg-black/40 backdrop-blur-md border border-white/15 rounded-full px-2.5 py-0.5 text-xs font-medium text-sky-200">💧 --%</span>
+                        <span id="pill-uv" class="bg-black/40 backdrop-blur-md border border-white/15 rounded-full px-2.5 py-0.5 text-xs font-medium text-amber-200">☀️ UV --</span>
+                        <span id="pill-aqi" class="bg-black/40 backdrop-blur-md border border-white/15 rounded-full px-2.5 py-0.5 text-xs font-medium text-emerald-200">🍃 AQI --</span>
+                        <span id="pill-sun" class="bg-black/40 backdrop-blur-md border border-white/15 rounded-full px-2.5 py-0.5 text-xs font-medium text-orange-200">🌅 --</span>
+                        <span id="pill-moon" class="bg-black/40 backdrop-blur-md border border-white/15 rounded-full px-2.5 py-0.5 text-xs font-medium text-indigo-200">🌕 --</span>
                     </div>
 
-                    <div class="flex items-center justify-end gap-1.5 mt-1.5 text-[clamp(0.75rem,2vw,1.1rem)] text-gray-200 opacity-80 font-light tracking-wide uppercase">
+                    <!-- Next-Hour Rain Timeline (Automatically appears when precipitation is expected in the next 60 mins) -->
+                    <div id="next-hour-rain-box" class="night-hide hidden mt-2.5 ml-auto bg-sky-950/60 backdrop-blur-md border border-sky-400/30 rounded-xl px-3 py-2 text-left max-w-[260px] shadow-lg">
+                        <div class="flex items-center justify-between text-[11px] font-bold text-sky-200 uppercase tracking-wider mb-1.5">
+                            <span>🌧️ Next Hour Rain</span>
+                            <span id="rain-timeline-summary" class="text-white">Soon</span>
+                        </div>
+                        <div id="rain-timeline-bars" class="grid grid-cols-4 gap-1.5 items-end h-8">
+                            <!-- 15-min interval bars injected via JS -->
+                        </div>
+                    </div>
+
+                    <!-- Network Status / Cached Indicators -->
+                    <div class="flex items-center justify-end gap-2 mt-1.5 text-[clamp(0.75rem,2vw,1.1rem)] text-gray-200 opacity-85 font-light tracking-wide uppercase">
+                        <span id="network-offline-pill" class="hidden inline-flex items-center gap-1 bg-rose-500/30 border border-rose-400/50 text-rose-200 text-[10px] font-bold px-2 py-0.5 rounded-full">
+                            <span class="w-1.5 h-1.5 rounded-full bg-rose-400 animate-ping"></span> Offline
+                        </span>
                         <span id="offline-indicator" class="hidden text-amber-400 font-bold" title="Cached data">(Cached)</span>
-                        <span id="weather-location">Teaneck, NJ</span>
                     </div>
                 </section>
             </header>
 
-            <!-- BOTTOM ROW: Clock & Countdown Pill -->
-            <footer class="flex flex-wrap justify-between items-end gap-6 md:gap-8 mt-auto text-shadow-heavy w-full">
+            <!-- BOTTOM ROW: Clock, Event Countdown & Israel World Clock -->
+            <footer class="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 md:gap-8 mt-auto text-shadow-heavy w-full">
                 
-                <!-- Clock, Countdown Badge, and Date Section -->
-                <section id="clock-section" 
-                         class="flex-shrink-0" 
-                         aria-label="Current Time and Date" 
-                         aria-live="polite">
-                    <!-- Holiday / Event Countdown Pill -->
-                    <div id="event-countdown-badge" 
-                         class="night-hide hidden inline-flex items-center gap-1.5 bg-white/15 backdrop-blur-md border border-white/15 rounded-full px-3 py-1 mb-2 text-xs sm:text-sm font-semibold text-amber-200 shadow-lg">
-                        <span id="event-icon" aria-hidden="true">🎉</span>
-                        <span id="event-text">Countdown</span>
+                <!-- Clock, Countdown Badge, Israel World Clock Pill, and Date Section -->
+                <section id="clock-section" aria-label="Current Time and Date" aria-live="polite" class="flex-shrink-0">
+                    <!-- Event Countdown & Secondary World Clock Row -->
+                    <div class="flex flex-wrap items-center gap-2 mb-2 pl-1">
+                        <div id="event-countdown-pill" class="night-hide hidden inline-flex items-center gap-1.5 bg-white/15 backdrop-blur-md border border-white/20 rounded-full px-3 py-1 text-xs sm:text-sm font-medium text-white shadow-md">
+                            <span id="event-icon" aria-hidden="true">🎉</span>
+                            <span id="event-text">Countdown</span>
+                        </div>
+                        <div id="world-clock-pill" class="night-hide hidden inline-flex items-center gap-1.5 bg-black/40 backdrop-blur-md border border-white/15 rounded-full px-3 py-1 text-xs sm:text-sm font-medium text-gray-100 shadow-md">
+                            <span id="world-clock-flag" aria-hidden="true">🇮🇱</span>
+                            <span id="world-clock-time" class="font-bold text-white tabular-nums">--:--</span>
+                        </div>
                     </div>
 
-                    <div class="flex items-baseline gap-2 md:gap-4">
-                        <time id="time" class="text-[clamp(4.5rem,18vw,12rem)] font-black leading-none tracking-tight">--:--</time>
-                        <span id="ampm" class="text-[clamp(1.5rem,6vw,3rem)] font-bold mb-2 md:mb-4 opacity-90"></span>
+                    <div class="flex items-baseline gap-2 md:gap-4 flex-wrap">
+                        <time id="time" class="text-[clamp(4.5rem,17vw,12rem)] font-black leading-none tracking-tight">--:--</time>
+                        <span id="ampm" class="text-[clamp(1.5rem,4.5vw,3.5rem)] font-bold opacity-90">--</span>
                     </div>
-                    <div id="date" class="text-[clamp(1.25rem,4vw,2.5rem)] font-medium mt-2 text-gray-100 pl-1 md:pl-2 opacity-90">---</div>
+                    <div id="date" class="text-[clamp(1.25rem,3.5vw,2.5rem)] font-medium mt-1 md:mt-2 text-gray-100 pl-1 md:pl-2 opacity-90">---</div>
                 </section>
+
             </footer>
-
         </main>
-
-        <!-- TAP-TO-TOGGLE FLOATING TOUCH CONTROL BAR -->
-        <aside id="touch-control-bar" 
-               class="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 flex flex-wrap items-center justify-center gap-2 bg-slate-900/90 backdrop-blur-xl border border-white/20 rounded-2xl p-2.5 shadow-2xl transition-all duration-300 opacity-0 pointer-events-none translate-y-4 max-w-[95vw]"
-               aria-label="Quick Touch Controls">
-            
-            <!-- Quick Kitchen Timers -->
-            <div id="timer-presets-group" class="flex items-center gap-1.5 pr-2 border-r border-white/15">
-                <span class="text-xs text-gray-300 font-medium px-1" aria-hidden="true">⏲️</span>
-            </div>
-
-            <!-- Action Controls -->
-            <div class="flex items-center gap-1.5">
-                <button id="btn-switch-location" type="button" class="px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 text-xs font-semibold transition">
-                    📍 Switch City
-                </button>
-                <button id="btn-toggle-24h" type="button" class="px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 text-xs font-semibold transition">
-                    🕒 12h/24h
-                </button>
-                <button id="btn-cycle-bg" type="button" class="px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 text-xs font-semibold transition">
-                    🖼️ Wallpaper
-                </button>
-                <button id="btn-toggle-night" type="button" class="px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 text-xs font-semibold transition">
-                    🌙 Night Mode
-                </button>
-                <button id="btn-refresh-weather" type="button" class="px-3 py-2 rounded-xl bg-emerald-500/25 hover:bg-emerald-500/40 border border-emerald-400/30 active:scale-95 text-xs font-semibold text-emerald-200 transition">
-                    🔄 Refresh
-                </button>
-            </div>
-        </aside>
-
     </div>
 
+    <!-- Tap-to-Toggle Floating Touch Control Bar (Auto-hides after inactivity) -->
+    <aside id="touch-control-bar" aria-label="Quick Dashboard Controls" class="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 opacity-0 pointer-events-none translate-y-4 transition-all duration-300 w-[95%] max-w-4xl">
+        <div class="bg-neutral-900/90 backdrop-blur-xl border border-white/20 rounded-2xl p-2.5 sm:p-3 shadow-2xl flex flex-wrap items-center justify-center gap-2">
+            
+            <!-- Quick Kitchen Timers -->
+            <div class="flex items-center gap-1 bg-white/10 rounded-xl p-1">
+                <span class="text-xs font-semibold text-gray-300 px-1.5">⏲️ Timer:</span>
+                <button type="button" data-timer="5" class="timer-preset-btn px-2.5 py-1.5 rounded-lg bg-white/10 hover:bg-white/25 active:scale-95 text-xs font-bold transition">5m</button>
+                <button type="button" data-timer="10" class="timer-preset-btn px-2.5 py-1.5 rounded-lg bg-white/10 hover:bg-white/25 active:scale-95 text-xs font-bold transition">10m</button>
+                <button type="button" data-timer="15" class="timer-preset-btn px-2.5 py-1.5 rounded-lg bg-white/10 hover:bg-white/25 active:scale-95 text-xs font-bold transition">15m</button>
+                <button type="button" data-timer="30" class="timer-preset-btn px-2.5 py-1.5 rounded-lg bg-white/10 hover:bg-white/25 active:scale-95 text-xs font-bold transition">30m</button>
+            </div>
+
+            <!-- Ambient Soundscape Generator (Tone.js) -->
+            <button id="btn-toggle-sound" type="button" class="px-3 py-2 rounded-xl bg-white/10 hover:bg-white/25 active:scale-95 text-xs font-semibold transition flex items-center gap-1.5">
+                🎧 <span id="sound-status-label">Sound: Off</span>
+            </button>
+
+            <!-- Switch Saved Location -->
+            <button id="btn-switch-location" type="button" class="px-3 py-2 rounded-xl bg-white/10 hover:bg-white/25 active:scale-95 text-xs font-semibold transition flex items-center gap-1.5">
+                📍 <span id="btn-location-label">Switch City</span>
+            </button>
+
+            <!-- Toggle 12h / 24h Format -->
+            <button id="btn-toggle-24h" type="button" class="px-3 py-2 rounded-xl bg-white/10 hover:bg-white/25 active:scale-95 text-xs font-semibold transition">
+                🕒 12h / 24h
+            </button>
+
+            <!-- Cycle Wallpaper -->
+            <button id="btn-cycle-bg" type="button" class="px-3 py-2 rounded-xl bg-white/10 hover:bg-white/25 active:scale-95 text-xs font-semibold transition">
+                🖼️ Wallpaper
+            </button>
+
+            <!-- Toggle Night Mode Override -->
+            <button id="btn-toggle-night" type="button" class="px-3 py-2 rounded-xl bg-white/10 hover:bg-white/25 active:scale-95 text-xs font-semibold transition">
+                🌙 Night Mode
+            </button>
+
+            <!-- Blackout / Sleep Screen -->
+            <button id="btn-blackout" type="button" class="px-3 py-2 rounded-xl bg-white/10 hover:bg-white/25 active:scale-95 text-xs font-semibold transition">
+                ⬛ Screen Off
+            </button>
+
+            <!-- Force Weather Refresh -->
+            <button id="btn-refresh-weather" type="button" class="px-3 py-2 rounded-xl bg-sky-500/30 hover:bg-sky-500/50 border border-sky-400/30 active:scale-95 text-xs font-semibold transition">
+                🔄 Refresh
+            </button>
+        </div>
+    </aside>
+
     <script>
-        /**
-         * =====================================================================
-         * USER CONFIGURATION (Edit all dashboard settings here)
-         * =====================================================================
-         */
+        /* ==========================================================================
+           MASTER CONFIGURATION (Edit any setting below to customize your dashboard)
+           ========================================================================== */
         const CONFIG = {
-            // 1. Saved Locations (Switchable via the tap-to-toggle control bar)
-            DEFAULT_LOCATION_INDEX: 0,
+            // 1. Saved Locations (Tap "Switch City" in the touch bar to cycle through these)
             LOCATIONS: [
-                {
-                    NAME: 'Teaneck, NJ',
-                    LAT: 40.8976,
-                    LON: -74.0154,
-                    TIMEZONE: 'America/New_York'
-                },
-                {
-                    NAME: 'New York, NY',
-                    LAT: 40.7128,
-                    LON: -74.0060,
-                    TIMEZONE: 'America/New_York'
-                }
+                { NAME: 'Teaneck, NJ', LAT: 40.8976, LON: -74.0154 },
+                { NAME: 'New York, NY', LAT: 40.7128, LON: -74.0060 },
+                { NAME: 'Jerusalem', LAT: 31.7683, LON: 35.2137 }
             ],
+            DEFAULT_LOCATION_INDEX: 0,
 
-            // 2. Weather & Environmental Settings
+            // 2. Weather & Units
             TEMP_UNIT: 'fahrenheit',          // 'fahrenheit' or 'celsius'
-            SHOW_FEELS_LIKE: true,
-            SHOW_RAIN_CHANCE: true,
-            SHOW_UV_INDEX: true,
-            SHOW_AQI: true,
-            SHOW_SUN_COUNTDOWN: true,
+            SHOW_NEXT_HOUR_RAIN: true,        // Pops up a 60-min rain bar when precipitation is approaching
 
-            // 3. Time & Locale Settings
+            // 3. Clock, Locale & World Clock
             LOCALE: 'en-US',
-            USE_24_HOUR: false,
+            TIMEZONE: undefined,              // undefined = device local timezone
+            USE_24_HOUR: false,               // true for 24-hour clock (14:30), false for 12-hour (2:30 PM)
+            WORLD_CLOCK: {
+                ENABLED: true,
+                FLAG: '🇮🇱',
+                TIMEZONE: 'Asia/Jerusalem'
+            },
 
-            // 4. Auto Night Mode / Dimming Schedule
+            // 4. Refresh & Network Timing (Milliseconds)
+            CLOCK_INTERVAL_MS: 1000,          // Clock tick frequency (1 second)
+            WEATHER_INTERVAL_MS: 600000,      // Weather API refresh (10 minutes)
+            FETCH_TIMEOUT_MS: 8000,           // Abort API requests if slower than 8 seconds
+            CACHE_TTL_MS: 3600000,            // Keep cached weather valid for up to 1 hour offline
+            STORAGE_KEY: 'echo_dashboard_v5',
+
+            // 5. Auto Night Mode / Bedside Dimming Schedule
             NIGHT_MODE: {
                 ENABLED: true,
-                START_HOUR: 22,               // 10:00 PM
-                END_HOUR: 6,                  // 6:00 AM
-                BRIGHTNESS: 0.35,             // 0.1 to 1.0
-                SEPIA_WARMTH: 0.25,           // Warm tint (0 to 1) to reduce blue light
-                HIDE_EXTRA_WIDGETS: true      // Hides pills/badges during night mode
+                START_HOUR: 22,               // 10:00 PM (24-hour format: 0-23)
+                END_HOUR: 6,                  // 6:00 AM (24-hour format: 0-23)
+                BRIGHTNESS: 0.30,             // Screen brightness during night hours (0.1 to 1.0)
+                WARM_TINT: 0.35,              // Warm sepia filter to reduce blue light (0.0 to 1.0)
+                HIDE_EXTRA_WIDGETS: true      // Hides pills at night for a clean bedside clock
             },
 
-            // 5. OLED / LCD Burn-In Protection (Pixel Shift) & Wake Lock
+            // 6. Display Hardware Protection (Burn-in Prevention & Wake Lock)
             PIXEL_SHIFT: {
                 ENABLED: true,
-                INTERVAL_MS: 15 * 60 * 1000,  // Shift every 15 minutes
-                MAX_OFFSET_PX: 4              // Subtle 1-4px drift
+                INTERVAL_MS: 900000,          // Shift position every 15 minutes
+                MAX_OFFSET_PX: 4              // Subtle 1-4px drift to protect LCD/OLED pixels
             },
-            KEEP_SCREEN_AWAKE: true,          // Uses Screen Wake Lock API if supported
+            KEEP_SCREEN_AWAKE: true,          // Uses Screen Wake Lock API when supported
 
-            // 6. Interactive Kitchen Timers & Holiday Countdowns
-            TIMERS: {
-                PRESETS_MINUTES: [5, 10, 15, 30]
-            },
+            // 7. Holiday & Event Countdowns
             EVENTS: [
-                { LABEL: 'Thanksgiving', MONTH: 11, DAY: 26, ICON: '🦃' },
-                { LABEL: 'Christmas', MONTH: 12, DAY: 25, ICON: '🎄' },
-                { LABEL: 'New Year', MONTH: 1, DAY: 1, ICON: '🎆' }
+                { NAME: "New Year's Day", MONTH: 1, DAY: 1, ICON: "🎆" },
+                { NAME: "Independence Day", MONTH: 7, DAY: 4, ICON: "🇺🇸" },
+                { NAME: "Halloween", MONTH: 10, DAY: 31, ICON: "🎃" },
+                { NAME: "Thanksgiving", MONTH: 11, DAY: 26, ICON: "🦃" },
+                { NAME: "Christmas", MONTH: 12, DAY: 25, ICON: "🎄" }
             ],
 
-            // 7. Refresh & Network Resilience Settings
-            CLOCK_INTERVAL_MS: 1000,          // Clock update frequency (1 second)
-            WEATHER_INTERVAL_MS: 10 * 60 * 1000, // Weather API refresh interval (10 minutes)
-            FETCH_TIMEOUT_MS: 8000,           // AbortController timeout (8 seconds)
-            STORAGE_KEY: 'echo_dashboard_weather_cache_v3',
+            // 8. Tap-to-Reveal Touch Control Bar & Kitchen Timers
+            CONTROLS: {
+                AUTO_HIDE_MS: 8000,
+                TIMER_PRESETS_MIN: [5, 10, 15, 30],
+                SOUND_PRESETS: ['Off', 'Brown Noise', 'Soft Rain', 'White Noise']
+            },
 
-            // 8. Dynamic Weather & Time-of-Day Background Wallpapers
+            // 9. Dynamic Weather & Time-of-Day Wallpapers
             BACKGROUNDS: {
-                DEFAULT: 'https://images.unsplash.com/photo-1506744626753-1fa44df31c28?q=80&w=1920&auto=format&fit=crop',
-                THUNDERSTORM: 'https://images.unsplash.com/photo-1605727216801-e27ce1d0cc28?q=80&w=1920&auto=format&fit=crop',
-                SNOW: 'https://images.unsplash.com/photo-1491002052546-bf38f186af56?q=80&w=1920&auto=format&fit=crop',
-                RAIN: 'https://images.unsplash.com/photo-1515694346937-94d85e41e6f0?q=80&w=1920&auto=format&fit=crop',
-                FOG: 'https://images.unsplash.com/photo-1485236715568-ddc5ee6ca227?q=80&w=1920&auto=format&fit=crop',
-                NIGHT_CLEAR: 'https://images.unsplash.com/photo-1509773896068-7fd415d91e2e?q=80&w=1920&auto=format&fit=crop',
-                NIGHT_CLOUDY: 'https://images.unsplash.com/photo-1534447677768-be436bb09401?q=80&w=1920&auto=format&fit=crop',
-                DAY_CLOUDY: 'https://images.unsplash.com/photo-1534088568595-a066f410bcda?q=80&w=1920&auto=format&fit=crop',
-                DAY_SUNNY: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?q=80&w=1920&auto=format&fit=crop'
+                THUNDERSTORM: 'https://images.unsplash.com/photo-1605727216801-e27ce1d0cc28?auto=format&fit=crop&w=1920&q=80',
+                RAIN:         'https://images.unsplash.com/photo-1515694346937-94d85e41e6f0?auto=format&fit=crop&w=1920&q=80',
+                SNOW:         'https://images.unsplash.com/photo-1478265409131-1f65c88f965c?auto=format&fit=crop&w=1920&q=80',
+                FOG:          'https://images.unsplash.com/photo-1487621167305-5d248087c724?auto=format&fit=crop&w=1920&q=80',
+                CLOUDY_DAY:   'https://images.unsplash.com/photo-1534088568595-a066f410bcda?auto=format&fit=crop&w=1920&q=80',
+                NIGHT_CLEAR:  'https://images.unsplash.com/photo-1507400492013-162706c8c05e?auto=format&fit=crop&w=1920&q=80',
+                DAY_CLEAR:    'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=1920&q=80'
             }
         };
 
-        /**
-         * =====================================================================
-         * RUNTIME STATE & CACHED DOM REFERENCES
-         * =====================================================================
-         */
-        const STATE = {
+        /* ==========================================================================
+           APPLICATION STATE & DOM CACHE
+           ========================================================================== */
+        const state = {
             locationIndex: CONFIG.DEFAULT_LOCATION_INDEX,
             use24Hour: CONFIG.USE_24_HOUR,
-            manualNightOverride: null,        // null = auto schedule, true/false = manual override
-            manualBgIndex: -1,                // -1 = weather-driven, >=0 = manual wallpaper index
+            nightModeOverride: null,          // null = auto schedule, true/false = manual override
+            manualBgIndex: -1,
             activeBgLayer: 1,
-            currentBgUrl: CONFIG.BACKGROUNDS.DEFAULT,
-            dailySunData: null,               // { sunrise: Date, sunset: Date }
+            currentBgUrl: '',
+            sunTimes: { sunrise: null, sunset: null },
+            timerRemainingSec: 0,
             timerInterval: null,
-            timerEndTime: null,
-            timerTotalLabel: '',
-            timerRinging: false,
-            controlBarTimeout: null
+            controlsHideTimeout: null,
+            wakeLockSentinel: null,
+            soundIndex: 0,
+            activeNoiseNode: null,
+            activeFilterNode: null
         };
 
         const DOM = {
-            root: document.getElementById('dashboard-root'),
-            mainContent: document.getElementById('main-content'),
+            bg1: document.getElementById('bg-layer-1'),
+            bg2: document.getElementById('bg-layer-2'),
+            blackoutOverlay: document.getElementById('blackout-overlay'),
+            shifter: document.getElementById('burn-in-shifter'),
+            
+            // Clock & World Clock
             time: document.getElementById('time'),
             ampm: document.getElementById('ampm'),
             date: document.getElementById('date'),
+            eventPill: document.getElementById('event-countdown-pill'),
+            eventIcon: document.getElementById('event-icon'),
+            eventText: document.getElementById('event-text'),
+            worldClockPill: document.getElementById('world-clock-pill'),
+            worldClockFlag: document.getElementById('world-clock-flag'),
+            worldClockTime: document.getElementById('world-clock-time'),
+
+            // Weather & Environment
             weatherIcon: document.getElementById('weather-icon'),
             weatherTemp: document.getElementById('weather-temp'),
             weatherDesc: document.getElementById('weather-desc'),
-            weatherLocation: document.getElementById('weather-location'),
+            pillFeels: document.getElementById('pill-feels'),
+            pillRain: document.getElementById('pill-rain'),
+            pillUv: document.getElementById('pill-uv'),
+            pillAqi: document.getElementById('pill-aqi'),
+            pillSun: document.getElementById('pill-sun'),
+            pillMoon: document.getElementById('pill-moon'),
             offlineIndicator: document.getElementById('offline-indicator'),
-            metricFeels: document.getElementById('metric-feels'),
-            metricRain: document.getElementById('metric-rain'),
-            metricUv: document.getElementById('metric-uv'),
-            metricAqi: document.getElementById('metric-aqi'),
-            metricSun: document.getElementById('metric-sun'),
-            eventBadge: document.getElementById('event-countdown-badge'),
-            eventIcon: document.getElementById('event-icon'),
-            eventText: document.getElementById('event-text'),
-            bgLayer1: document.getElementById('bg-layer-1'),
-            bgLayer2: document.getElementById('bg-layer-2'),
-            controlBar: document.getElementById('touch-control-bar'),
-            timerPresetsGroup: document.getElementById('timer-presets-group'),
-            activeTimerPill: document.getElementById('active-timer-pill'),
-            timerLabel: document.getElementById('timer-label'),
-            timerCountdown: document.getElementById('timer-countdown'),
-            timerCancelBtn: document.getElementById('timer-cancel-btn'),
+            networkOfflinePill: document.getElementById('network-offline-pill'),
+            rainTimelineBox: document.getElementById('next-hour-rain-box'),
+            rainTimelineSummary: document.getElementById('rain-timeline-summary'),
+            rainTimelineBars: document.getElementById('rain-timeline-bars'),
+
+            // Timer & Touch Bar
+            activeTimerCard: document.getElementById('active-timer-card'),
+            timerDisplay: document.getElementById('timer-display'),
+            cancelTimerBtn: document.getElementById('cancel-timer-btn'),
+            touchBar: document.getElementById('touch-control-bar'),
             btnSwitchLocation: document.getElementById('btn-switch-location'),
+            btnLocationLabel: document.getElementById('btn-location-label'),
+            btnToggleSound: document.getElementById('btn-toggle-sound'),
+            soundStatusLabel: document.getElementById('sound-status-label'),
             btnToggle24h: document.getElementById('btn-toggle-24h'),
             btnCycleBg: document.getElementById('btn-cycle-bg'),
             btnToggleNight: document.getElementById('btn-toggle-night'),
+            btnBlackout: document.getElementById('btn-blackout'),
             btnRefreshWeather: document.getElementById('btn-refresh-weather')
         };
 
-        const WMO_WEATHER_MAP = {
-            0:  { text: 'Clear sky', icon: '☀️' },
-            1:  { text: 'Mainly clear', icon: '🌤️' },
-            2:  { text: 'Partly cloudy', icon: '⛅' },
-            3:  { text: 'Overcast', icon: '☁️' },
-            45: { text: 'Fog', icon: '🌫️' },
-            48: { text: 'Rime fog', icon: '🌫️' },
-            51: { text: 'Light drizzle', icon: '🌧️' },
-            53: { text: 'Moderate drizzle', icon: '🌧️' },
-            55: { text: 'Dense drizzle', icon: '🌧️' },
-            61: { text: 'Slight rain', icon: '🌧️' },
-            63: { text: 'Moderate rain', icon: '🌧️' },
-            65: { text: 'Heavy rain', icon: '🌧️' },
-            71: { text: 'Slight snow', icon: '❄️' },
-            73: { text: 'Moderate snow', icon: '❄️' },
-            75: { text: 'Heavy snow', icon: '❄️' },
-            77: { text: 'Snow grains', icon: '❄️' },
-            80: { text: 'Slight showers', icon: '🌦️' },
-            81: { text: 'Moderate showers', icon: '🌦️' },
-            82: { text: 'Violent showers', icon: '⛈️' },
-            95: { text: 'Thunderstorm', icon: '⛈️' },
-            96: { text: 'Thunderstorm & hail', icon: '⛈️' },
-            99: { text: 'Heavy thunderstorm', icon: '⛈️' }
-        };
-
-        let dateFormatter = null;
-        let hourFormatter = null;
-
+        /* ==========================================================================
+           1. CLOCK, WORLD CLOCK, DATE, SUN/MOON & COUNTDOWN LOGIC
+           ========================================================================== */
         function getActiveLocation() {
-            return CONFIG.LOCATIONS[STATE.locationIndex] || CONFIG.LOCATIONS[0];
+            return CONFIG.LOCATIONS[state.locationIndex] || CONFIG.LOCATIONS[0];
         }
 
-        function rebuildFormatters() {
+        function updateLocationDisplay() {
             const loc = getActiveLocation();
-            dateFormatter = new Intl.DateTimeFormat(CONFIG.LOCALE, {
-                weekday: 'long',
-                month: 'long',
-                day: 'numeric',
-                timeZone: loc.TIMEZONE
-            });
-            hourFormatter = new Intl.DateTimeFormat('en-US', {
-                hour: 'numeric',
-                minute: 'numeric',
-                hour12: false,
-                timeZone: loc.TIMEZONE
-            });
+            DOM.btnLocationLabel.textContent = loc.NAME.split(',')[0];
+            DOM.worldClockFlag.textContent = CONFIG.WORLD_CLOCK.FLAG;
         }
 
-        /**
-         * =====================================================================
-         * CLOCK, NIGHT MODE, EVENT COUNTDOWN & SUNRISE/SUNSET LOGIC
-         * =====================================================================
-         */
         function updateClock() {
             const now = new Date();
-            const loc = getActiveLocation();
+            const timeFormatter = new Intl.DateTimeFormat(CONFIG.LOCALE, {
+                timeZone: CONFIG.TIMEZONE,
+                hour: 'numeric',
+                minute: '2-digit',
+                hour12: !state.use24Hour
+            });
 
-            // Extract local hour & minute in configured timezone
-            const parts = hourFormatter.formatToParts(now);
-            const hour24 = parseInt(parts.find(p => p.type === 'hour')?.value || '0', 10) % 24;
-            const minuteStr = (parts.find(p => p.type === 'minute')?.value || '00').padStart(2, '0');
+            const parts = timeFormatter.formatToParts(now);
+            const hour = parts.find(p => p.type === 'hour')?.value || '--';
+            const minute = parts.find(p => p.type === 'minute')?.value || '--';
+            const dayPeriod = parts.find(p => p.type === 'dayPeriod')?.value || '';
 
-            if (STATE.use24Hour) {
-                DOM.time.textContent = `${hour24.toString().padStart(2, '0')}:${minuteStr}`;
-                DOM.ampm.textContent = '';
-            } else {
-                const ampm = hour24 >= 12 ? 'PM' : 'AM';
-                const hour12 = (hour24 % 12) || 12;
-                DOM.time.textContent = `${hour12}:${minuteStr}`;
-                DOM.ampm.textContent = ampm;
-            }
+            DOM.time.textContent = `${hour}:${minute}`;
+            DOM.ampm.textContent = state.use24Hour ? '' : dayPeriod;
+            DOM.ampm.style.display = state.use24Hour ? 'none' : 'inline';
 
+            const dateFormatter = new Intl.DateTimeFormat(CONFIG.LOCALE, {
+                timeZone: CONFIG.TIMEZONE,
+                weekday: 'long',
+                month: 'long',
+                day: 'numeric'
+            });
             DOM.date.textContent = dateFormatter.format(now);
 
-            applyNightMode(hour24);
-            updateEventCountdown(now, loc.TIMEZONE);
+            updateWorldClock(now);
             updateSunCountdown(now);
+            updateMoonPhase(now);
         }
 
-        function applyNightMode(currentHour24) {
-            let isNight = false;
-
-            if (STATE.manualNightOverride !== null) {
-                isNight = STATE.manualNightOverride;
-            } else if (CONFIG.NIGHT_MODE.ENABLED) {
-                const start = CONFIG.NIGHT_MODE.START_HOUR;
-                const end = CONFIG.NIGHT_MODE.END_HOUR;
-                isNight = start > end
-                    ? (currentHour24 >= start || currentHour24 < end)
-                    : (currentHour24 >= start && currentHour24 < end);
-            }
-
-            if (isNight) {
-                DOM.root.style.filter = `brightness(${CONFIG.NIGHT_MODE.BRIGHTNESS}) sepia(${CONFIG.NIGHT_MODE.SEPIA_WARMTH})`;
-                if (CONFIG.NIGHT_MODE.HIDE_EXTRA_WIDGETS) {
-                    document.querySelectorAll('.night-hide').forEach(el => el.classList.add('opacity-0', 'pointer-events-none'));
-                }
-            } else {
-                DOM.root.style.filter = 'brightness(1) sepia(0)';
-                document.querySelectorAll('.night-hide').forEach(el => el.classList.remove('opacity-0', 'pointer-events-none'));
-            }
-        }
-
-        function updateEventCountdown(now, timeZone) {
-            if (!CONFIG.EVENTS || CONFIG.EVENTS.length === 0) {
-                DOM.eventBadge.classList.add('hidden');
+        function updateWorldClock(now) {
+            if (!CONFIG.WORLD_CLOCK.ENABLED) {
+                DOM.worldClockPill.classList.add('hidden');
                 return;
             }
-
-            // Determine today's YYYY-MM-DD in target timezone
-            const localDateStr = new Intl.DateTimeFormat('en-CA', { timeZone }).format(now);
-            const [y, m, d] = localDateStr.split('-').map(Number);
-            const todayMidnight = Date.UTC(y, m - 1, d);
-
-            let nearestEvent = null;
-            let minDays = Infinity;
-
-            for (const ev of CONFIG.EVENTS) {
-                let targetYear = y;
-                let targetMidnight = Date.UTC(targetYear, ev.MONTH - 1, ev.DAY);
-                if (targetMidnight < todayMidnight) {
-                    targetYear += 1;
-                    targetMidnight = Date.UTC(targetYear, ev.MONTH - 1, ev.DAY);
-                }
-                const diffDays = Math.round((targetMidnight - todayMidnight) / (1000 * 60 * 60 * 24));
-                if (diffDays < minDays) {
-                    minDays = diffDays;
-                    nearestEvent = ev;
-                }
-            }
-
-            if (nearestEvent && minDays <= 45) {
-                DOM.eventIcon.textContent = nearestEvent.ICON || '🎉';
-                if (minDays === 0) {
-                    DOM.eventText.textContent = `Today is ${nearestEvent.LABEL}!`;
-                } else if (minDays === 1) {
-                    DOM.eventText.textContent = `${nearestEvent.LABEL} is Tomorrow`;
-                } else {
-                    DOM.eventText.textContent = `${minDays} days until ${nearestEvent.LABEL}`;
-                }
-                DOM.eventBadge.classList.remove('hidden');
-            } else {
-                DOM.eventBadge.classList.add('hidden');
+            try {
+                const wcFormatter = new Intl.DateTimeFormat(CONFIG.LOCALE, {
+                    timeZone: CONFIG.WORLD_CLOCK.TIMEZONE,
+                    hour: 'numeric',
+                    minute: '2-digit',
+                    hour12: !state.use24Hour
+                });
+                DOM.worldClockTime.textContent = wcFormatter.format(now);
+                DOM.worldClockPill.classList.remove('hidden');
+            } catch (e) {
+                DOM.worldClockPill.classList.add('hidden');
             }
         }
 
         function updateSunCountdown(now) {
-            if (!CONFIG.SHOW_SUN_COUNTDOWN || !STATE.dailySunData) {
-                DOM.metricSun.classList.add('hidden');
-                return;
-            }
+            const { sunrise, sunset } = state.sunTimes;
+            if (!sunrise || !sunset) return;
 
-            const { sunrise, sunset } = STATE.dailySunData;
-            let targetTime = null;
-            let label = '';
-
+            let target, label, icon;
             if (now < sunrise) {
-                targetTime = sunrise;
-                label = '🌅 Sunrise in';
+                target = sunrise;
+                label = 'Sunrise';
+                icon = '🌅';
             } else if (now < sunset) {
-                targetTime = sunset;
-                label = '🌇 Sunset in';
+                target = sunset;
+                label = 'Sunset';
+                icon = '🌇';
             } else {
-                DOM.metricSun.textContent = '🌙 Nighttime';
-                DOM.metricSun.classList.remove('hidden');
-                return;
+                target = new Date(sunrise.getTime() + 86400000);
+                label = 'Sunrise';
+                icon = '🌅';
             }
 
-            const diffMins = Math.max(1, Math.round((targetTime - now) / 60000));
+            const diffMins = Math.max(1, Math.round((target - now) / 60000));
             const hrs = Math.floor(diffMins / 60);
             const mins = diffMins % 60;
             const timeStr = hrs > 0 ? `${hrs}h ${mins}m` : `${mins}m`;
-
-            DOM.metricSun.textContent = `${label} ${timeStr}`;
-            DOM.metricSun.classList.remove('hidden');
+            DOM.pillSun.textContent = `${icon} ${label} in ${timeStr}`;
         }
 
-        /**
-         * =====================================================================
-         * DISPLAY HARDWARE PROTECTION (PIXEL SHIFT & WAKE LOCK)
-         * =====================================================================
-         */
-        function startPixelShift() {
+        function updateMoonPhase(now) {
+            const synodicMonth = 29.53058867;
+            const knownNewMoon = new Date('2000-01-06T18:14:00Z').getTime();
+            const daysSince = (now.getTime() - knownNewMoon) / 86400000;
+            const phase = ((daysSince % synodicMonth) + synodicMonth) % synodicMonth;
+            const illumination = Math.round(((1 - Math.cos((2 * Math.PI * phase) / synodicMonth)) / 2) * 100);
+
+            let icon = '🌑', name = 'New Moon';
+            if (phase < 1.845) { icon = '🌑'; name = 'New Moon'; }
+            else if (phase < 5.536) { icon = '🌒'; name = 'Waxing Crescent'; }
+            else if (phase < 9.228) { icon = '🌓'; name = 'First Quarter'; }
+            else if (phase < 12.919) { icon = '🌔'; name = 'Waxing Gibbous'; }
+            else if (phase < 16.610) { icon = '🌕'; name = 'Full Moon'; }
+            else if (phase < 20.302) { icon = '🌖'; name = 'Waning Gibbous'; }
+            else if (phase < 23.993) { icon = '🌗'; name = 'Last Quarter'; }
+            else if (phase < 27.684) { icon = '🌘'; name = 'Waning Crescent'; }
+
+            DOM.pillMoon.textContent = `${icon} ${name} (${illumination}%)`;
+        }
+
+        function updateNextEvent() {
+            if (!CONFIG.EVENTS || CONFIG.EVENTS.length === 0) return;
+
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const currentYear = today.getFullYear();
+
+            let closestEvent = null;
+            let minDays = Infinity;
+
+            for (const ev of CONFIG.EVENTS) {
+                let evDate = new Date(currentYear, ev.MONTH - 1, ev.DAY);
+                if (evDate < today) {
+                    evDate = new Date(currentYear + 1, ev.MONTH - 1, ev.DAY);
+                }
+                const diffDays = Math.round((evDate - today) / 86400000);
+                if (diffDays < minDays) {
+                    minDays = diffDays;
+                    closestEvent = ev;
+                }
+            }
+
+            if (closestEvent) {
+                DOM.eventIcon.textContent = closestEvent.ICON;
+                if (minDays === 0) {
+                    DOM.eventText.textContent = `Today is ${closestEvent.NAME}!`;
+                } else if (minDays === 1) {
+                    DOM.eventText.textContent = `Tomorrow: ${closestEvent.NAME}`;
+                } else {
+                    DOM.eventText.textContent = `${minDays} days until ${closestEvent.NAME}`;
+                }
+                DOM.eventPill.classList.remove('hidden');
+            }
+        }
+
+        /* ==========================================================================
+           2. NIGHT MODE, BURN-IN PIXEL SHIFT, WAKE LOCK & NETWORK STATUS
+           ========================================================================== */
+        function updateNightMode() {
+            const hour = new Date().getHours();
+            const { ENABLED, START_HOUR, END_HOUR, BRIGHTNESS, WARM_TINT, HIDE_EXTRA_WIDGETS } = CONFIG.NIGHT_MODE;
+
+            let isNight = false;
+            if (state.nightModeOverride !== null) {
+                isNight = state.nightModeOverride;
+            } else if (ENABLED) {
+                isNight = START_HOUR > END_HOUR
+                    ? (hour >= START_HOUR || hour < END_HOUR)
+                    : (hour >= START_HOUR && hour < END_HOUR);
+            }
+
+            document.documentElement.style.setProperty('--night-brightness', isNight ? BRIGHTNESS : 1);
+            document.documentElement.style.setProperty('--night-sepia', isNight ? WARM_TINT : 0);
+
+            if (isNight && HIDE_EXTRA_WIDGETS) {
+                document.body.classList.add('is-night-mode');
+            } else {
+                document.body.classList.remove('is-night-mode');
+            }
+        }
+
+        function runPixelShift() {
             if (!CONFIG.PIXEL_SHIFT.ENABLED) return;
-            setInterval(() => {
-                const max = CONFIG.PIXEL_SHIFT.MAX_OFFSET_PX;
-                const offsetX = Math.floor(Math.random() * (max * 2 + 1)) - max;
-                const offsetY = Math.floor(Math.random() * (max * 2 + 1)) - max;
-                DOM.mainContent.style.transform = `translate3d(${offsetX}px, ${offsetY}px, 0)`;
-            }, CONFIG.PIXEL_SHIFT.INTERVAL_MS);
+            const max = CONFIG.PIXEL_SHIFT.MAX_OFFSET_PX;
+            const x = Math.floor(Math.random() * (max * 2 + 1)) - max;
+            const y = Math.floor(Math.random() * (max * 2 + 1)) - max;
+            DOM.shifter.style.transform = `translate3d(${x}px, ${y}px, 0)`;
         }
 
-        async function requestWakeLock() {
+        async function initWakeLock() {
             if (!CONFIG.KEEP_SCREEN_AWAKE || !('wakeLock' in navigator)) return;
             try {
-                await navigator.wakeLock.request('screen');
+                state.wakeLockSentinel = await navigator.wakeLock.request('screen');
             } catch (err) {
-                console.debug('WakeLock skipped or unsupported:', err.message);
+                console.warn('Wake Lock unavailable:', err.message);
             }
         }
 
-        /**
-         * =====================================================================
-         * DYNAMIC BACKGROUND PRELOADER & CROSS-FADE LOGIC
-         * =====================================================================
-         */
-        function resolveBackgroundUrl(weatherCode, isDay) {
-            if (STATE.manualBgIndex >= 0) {
-                const urls = Object.values(CONFIG.BACKGROUNDS);
-                return urls[STATE.manualBgIndex % urls.length];
+        function updateNetworkStatus() {
+            if (navigator.onLine) {
+                DOM.networkOfflinePill.classList.add('hidden');
+            } else {
+                DOM.networkOfflinePill.classList.remove('hidden');
             }
-
-            const bg = CONFIG.BACKGROUNDS;
-            if ([95, 96, 99].includes(weatherCode)) return bg.THUNDERSTORM;
-            if ([71, 73, 75, 77].includes(weatherCode)) return bg.SNOW;
-            if ([51, 53, 55, 61, 63, 65, 80, 81, 82].includes(weatherCode)) return bg.RAIN;
-            if ([45, 48].includes(weatherCode)) return bg.FOG;
-
-            if (isDay === 0) {
-                return [2, 3].includes(weatherCode) ? bg.NIGHT_CLOUDY : bg.NIGHT_CLEAR;
-            }
-            return [2, 3].includes(weatherCode) ? bg.DAY_CLOUDY : bg.DAY_SUNNY;
         }
 
-        function updateBackground(weatherCode, isDay) {
-            const targetUrl = resolveBackgroundUrl(weatherCode, isDay);
-            if (targetUrl === STATE.currentBgUrl) return;
+        /* ==========================================================================
+           3. PRELOADED CROSS-FADE BACKGROUND WALLPAPER ENGINE
+           ========================================================================== */
+        function selectBackgroundUrl(weatherCode, isDay) {
+            const BG = CONFIG.BACKGROUNDS;
+            if (weatherCode >= 95) return BG.THUNDERSTORM;
+            if ((weatherCode >= 51 && weatherCode <= 67) || (weatherCode >= 80 && weatherCode <= 82)) return BG.RAIN;
+            if ((weatherCode >= 71 && weatherCode <= 77) || weatherCode === 85 || weatherCode === 86) return BG.SNOW;
+            if (weatherCode === 45 || weatherCode === 48) return BG.FOG;
+            if (!isDay) return BG.NIGHT_CLEAR;
+            if (weatherCode === 2 || weatherCode === 3) return BG.CLOUDY_DAY;
+            return BG.DAY_CLEAR;
+        }
+
+        function applyBackgroundUrl(targetUrl) {
+            if (!targetUrl || targetUrl === state.currentBgUrl) return;
 
             const preloader = new Image();
             preloader.onload = () => {
-                const incomingLayer = STATE.activeBgLayer === 1 ? DOM.bgLayer2 : DOM.bgLayer1;
-                const outgoingLayer = STATE.activeBgLayer === 1 ? DOM.bgLayer1 : DOM.bgLayer2;
+                state.currentBgUrl = targetUrl;
+                const incoming = state.activeBgLayer === 1 ? DOM.bg2 : DOM.bg1;
+                const outgoing = state.activeBgLayer === 1 ? DOM.bg1 : DOM.bg2;
 
-                incomingLayer.src = targetUrl;
-                incomingLayer.classList.remove('opacity-0');
-                incomingLayer.classList.add('opacity-100');
+                incoming.style.backgroundImage = `url('${targetUrl}')`;
+                incoming.classList.replace('opacity-0', 'opacity-100');
+                outgoing.classList.replace('opacity-100', 'opacity-0');
 
-                outgoingLayer.classList.remove('opacity-100');
-                outgoingLayer.classList.add('opacity-0');
-
-                STATE.activeBgLayer = STATE.activeBgLayer === 1 ? 2 : 1;
-                STATE.currentBgUrl = targetUrl;
-            };
-            preloader.onerror = () => {
-                console.warn('Background image failed to preload, keeping current wallpaper.');
+                state.activeBgLayer = state.activeBgLayer === 1 ? 2 : 1;
             };
             preloader.src = targetUrl;
         }
 
-        /**
-         * =====================================================================
-         * WEATHER & ENVIRONMENTAL DATA FETCHING AND RENDERING
-         * =====================================================================
-         */
-        function renderWeather(current, daily, aqiCurrent, isCached = false) {
-            if (!current) {
-                DOM.weatherTemp.textContent = '--°';
-                DOM.weatherDesc.textContent = 'Weather Unavailable';
-                DOM.weatherIcon.textContent = '📡';
-                DOM.offlineIndicator.classList.add('hidden');
+        /* ==========================================================================
+           4. WEATHER, AIR QUALITY & NEXT-HOUR RAIN TIMELINE
+           ========================================================================== */
+        function getWeatherDetails(code) {
+            const map = {
+                0:  { text: 'Clear Sky', icon: '☀️' },
+                1:  { text: 'Mainly Clear', icon: '🌤️' },
+                2:  { text: 'Partly Cloudy', icon: '⛅' },
+                3:  { text: 'Overcast', icon: '☁️' },
+                45: { text: 'Foggy', icon: '🌫️' },
+                48: { text: 'Rime Fog', icon: '🌫️' },
+                51: { text: 'Light Drizzle', icon: '🌧️' },
+                53: { text: 'Moderate Drizzle', icon: '🌧️' },
+                55: { text: 'Dense Drizzle', icon: '🌧️' },
+                61: { text: 'Slight Rain', icon: '🌧️' },
+                63: { text: 'Moderate Rain', icon: '🌧️' },
+                65: { text: 'Heavy Rain', icon: '🌧️' },
+                71: { text: 'Slight Snow', icon: '❄️' },
+                73: { text: 'Moderate Snow', icon: '❄️' },
+                75: { text: 'Heavy Snow', icon: '❄️' },
+                77: { text: 'Snow Grains', icon: '❄️' },
+                80: { text: 'Slight Showers', icon: '🌦️' },
+                81: { text: 'Moderate Showers', icon: '🌦️' },
+                82: { text: 'Violent Showers', icon: '⛈️' },
+                95: { text: 'Thunderstorm', icon: '⛈️' },
+                96: { text: 'Thunderstorm & Hail', icon: '⛈️' },
+                99: { text: 'Heavy Thunderstorm', icon: '⛈️' }
+            };
+            return map[code] || { text: 'Clear', icon: '🌡️' };
+        }
+
+        function getAqiLabel(aqi) {
+            if (aqi == null) return '🍃 AQI --';
+            if (aqi <= 50) return `🍃 AQI ${aqi} Good`;
+            if (aqi <= 100) return `🟡 AQI ${aqi} Mod`;
+            return `🟠 AQI ${aqi} Poor`;
+        }
+
+        function renderNextHourRain(minutely15) {
+            if (!CONFIG.SHOW_NEXT_HOUR_RAIN || !minutely15 || !Array.isArray(minutely15.time)) {
+                DOM.rainTimelineBox.classList.add('hidden');
                 return;
             }
 
+            const now = Date.now();
+            const upcoming = [];
+
+            for (let i = 0; i < minutely15.time.length && upcoming.length < 4; i++) {
+                const slotTime = new Date(minutely15.time[i]).getTime();
+                if (slotTime >= now - 900000) {
+                    upcoming.push({
+                        time: new Date(slotTime),
+                        precip: minutely15.precipitation?.[i] ?? 0
+                    });
+                }
+            }
+
+            const maxPrecip = Math.max(...upcoming.map(u => u.precip), 0);
+            if (upcoming.length < 4 || maxPrecip <= 0.05) {
+                DOM.rainTimelineBox.classList.add('hidden');
+                return;
+            }
+
+            const firstRainIdx = upcoming.findIndex(u => u.precip > 0.05);
+            DOM.rainTimelineSummary.textContent = firstRainIdx === 0 ? 'Raining Now' : `In ~${firstRainIdx * 15}m`;
+
+            let barsHtml = '';
+            upcoming.forEach((slot, idx) => {
+                const heightPct = Math.min(100, Math.max(18, Math.round((slot.precip / Math.max(maxPrecip, 1)) * 100)));
+                const label = idx === 0 ? 'Now' : `+${idx * 15}m`;
+                const barColor = slot.precip > 0.05 ? 'bg-sky-400' : 'bg-white/20';
+                barsHtml += `
+                    <div class="flex flex-col items-center gap-0.5 h-full justify-end">
+                        <div class="w-full rounded-t ${barColor} transition-all" style="height: ${heightPct}%"></div>
+                        <span class="text-[9px] text-sky-100/80 leading-none">${label}</span>
+                    </div>
+                `;
+            });
+
+            DOM.rainTimelineBars.innerHTML = barsHtml;
+            DOM.rainTimelineBox.classList.remove('hidden');
+        }
+
+        function renderWeather(weatherData, aqiData, isCached = false) {
+            if (!weatherData || !weatherData.current) return;
+
+            const current = weatherData.current;
+            const daily = weatherData.daily;
+
             const temp = Math.round(current.temperature_2m);
-            const feelsLike = Math.round(current.apparent_temperature ?? current.temperature_2m);
+            const feelsLike = Math.round(current.apparent_temperature ?? temp);
             const code = current.weather_code;
-            const isDay = current.is_day;
-            const info = WMO_WEATHER_MAP[code] || { text: 'Clear', icon: '🌡️' };
+            const isDay = current.is_day === 1;
+            const info = getWeatherDetails(code);
 
             DOM.weatherTemp.textContent = `${temp}°`;
             DOM.weatherDesc.textContent = info.text;
             DOM.weatherIcon.textContent = info.icon;
-            DOM.offlineIndicator.classList.toggle('hidden', !isCached);
+            DOM.pillFeels.textContent = `Feels ${feelsLike}°`;
 
-            // Feels Like pill
-            if (CONFIG.SHOW_FEELS_LIKE) {
-                DOM.metricFeels.textContent = `Feels ${feelsLike}°`;
-                DOM.metricFeels.classList.remove('hidden');
+            const rainChance = daily?.precipitation_probability_max?.[0] ?? 0;
+            const uvMax = daily?.uv_index_max?.[0] != null ? Math.round(daily.uv_index_max[0]) : '--';
+            DOM.pillRain.textContent = `💧 ${rainChance}%`;
+            DOM.pillUv.textContent = `☀️ UV ${uvMax}`;
+
+            const usAqi = aqiData?.current?.us_aqi ?? null;
+            DOM.pillAqi.textContent = getAqiLabel(usAqi);
+
+            if (daily?.sunrise?.[0] && daily?.sunset?.[0]) {
+                state.sunTimes = {
+                    sunrise: new Date(daily.sunrise[0]),
+                    sunset: new Date(daily.sunset[0])
+                };
+                updateSunCountdown(new Date());
+            }
+
+            renderNextHourRain(weatherData.minutely_15);
+
+            if (isCached) {
+                DOM.offlineIndicator.classList.remove('hidden');
             } else {
-                DOM.metricFeels.classList.add('hidden');
+                DOM.offlineIndicator.classList.add('hidden');
             }
 
-            // Rain Chance & UV Index from Daily[0]
-            if (daily) {
-                const rainChance = daily.precipitation_probability_max?.[0];
-                if (CONFIG.SHOW_RAIN_CHANCE && rainChance !== undefined && rainChance !== null) {
-                    DOM.metricRain.textContent = `💧 ${rainChance}%`;
-                    DOM.metricRain.classList.remove('hidden');
-                } else {
-                    DOM.metricRain.classList.add('hidden');
-                }
-
-                const uvIndex = daily.uv_index_max?.[0];
-                if (CONFIG.SHOW_UV_INDEX && uvIndex !== undefined && uvIndex !== null) {
-                    DOM.metricUv.textContent = `☀️ UV ${Math.round(uvIndex)}`;
-                    DOM.metricUv.classList.remove('hidden');
-                } else {
-                    DOM.metricUv.classList.add('hidden');
-                }
-
-                if (daily.sunrise?.[0] && daily.sunset?.[0]) {
-                    STATE.dailySunData = {
-                        sunrise: new Date(daily.sunrise[0]),
-                        sunset: new Date(daily.sunset[0])
-                    };
-                    updateSunCountdown(new Date());
-                }
+            if (state.manualBgIndex === -1) {
+                applyBackgroundUrl(selectBackgroundUrl(code, isDay));
             }
+        }
 
-            // Air Quality (US AQI)
-            if (CONFIG.SHOW_AQI && aqiCurrent && aqiCurrent.us_aqi !== undefined) {
-                DOM.metricAqi.textContent = `🍃 AQI ${Math.round(aqiCurrent.us_aqi)}`;
-                DOM.metricAqi.classList.remove('hidden');
-            } else {
-                DOM.metricAqi.classList.add('hidden');
+        async function fetchWithTimeout(url) {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), CONFIG.FETCH_TIMEOUT_MS);
+            try {
+                const res = await fetch(url, { signal: controller.signal });
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                return await res.json();
+            } finally {
+                clearTimeout(timeoutId);
             }
-
-            updateBackground(code, isDay);
         }
 
         async function fetchWeather() {
             const loc = getActiveLocation();
-            DOM.weatherLocation.textContent = loc.NAME;
+            const cacheKey = `${CONFIG.STORAGE_KEY}_${loc.LAT}_${loc.LON}_${CONFIG.TEMP_UNIT}`;
 
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), CONFIG.FETCH_TIMEOUT_MS);
+            const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${loc.LAT}&longitude=${loc.LON}`
+                + `&current=temperature_2m,apparent_temperature,is_day,weather_code`
+                + `&minutely_15=precipitation`
+                + `&daily=sunrise,sunset,uv_index_max,precipitation_probability_max`
+                + `&temperature_unit=${CONFIG.TEMP_UNIT}&timezone=auto&forecast_days=1`;
 
-            const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${loc.LAT}&longitude=${loc.LON}&current=temperature_2m,apparent_temperature,weather_code,is_day&daily=precipitation_probability_max,uv_index_max,sunrise,sunset&temperature_unit=${encodeURIComponent(CONFIG.TEMP_UNIT)}&timezone=${encodeURIComponent(loc.TIMEZONE)}&forecast_days=1`;
-            const aqiUrl = `https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${loc.LAT}&longitude=${loc.LON}&current=us_aqi&timezone=${encodeURIComponent(loc.TIMEZONE)}`;
-
-            const cacheSignature = `${loc.LAT},${loc.LON},${CONFIG.TEMP_UNIT}`;
+            const aqiUrl = `https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${loc.LAT}&longitude=${loc.LON}&current=us_aqi`;
 
             try {
-                // Fetch Current Weather + Air Quality in parallel
-                const [weatherRes, aqiRes] = await Promise.all([
-                    fetch(weatherUrl, { signal: controller.signal }),
-                    CONFIG.SHOW_AQI ? fetch(aqiUrl, { signal: controller.signal }).catch(() => null) : Promise.resolve(null)
+                const [weatherData, aqiData] = await Promise.all([
+                    fetchWithTimeout(weatherUrl),
+                    fetchWithTimeout(aqiUrl).catch(() => null)
                 ]);
-                clearTimeout(timeoutId);
 
-                if (!weatherRes.ok) throw new Error(`HTTP ${weatherRes.status}`);
-                const weatherData = await weatherRes.json();
-                const aqiData = (aqiRes && aqiRes.ok) ? await aqiRes.json() : null;
+                localStorage.setItem(cacheKey, JSON.stringify({
+                    timestamp: Date.now(),
+                    weatherData,
+                    aqiData
+                }));
 
-                if (weatherData && weatherData.current) {
-                    localStorage.setItem(CONFIG.STORAGE_KEY, JSON.stringify({
-                        weatherData,
-                        aqiData,
-                        configSignature: cacheSignature,
-                        timestamp: Date.now()
-                    }));
-
-                    renderWeather(weatherData.current, weatherData.daily, aqiData?.current, false);
-                }
+                updateNetworkStatus();
+                renderWeather(weatherData, aqiData, false);
             } catch (error) {
-                console.warn('Weather fetch failed, falling back to cache:', error);
-                
-                const cachedRaw = localStorage.getItem(CONFIG.STORAGE_KEY);
+                console.warn('Weather fetch failed, checking cache:', error);
+                updateNetworkStatus();
+                const cachedRaw = localStorage.getItem(cacheKey);
                 if (cachedRaw) {
-                    try {
-                        const cached = JSON.parse(cachedRaw);
-                        if (cached && cached.weatherData && cached.configSignature === cacheSignature) {
-                            renderWeather(cached.weatherData.current, cached.weatherData.daily, cached.aqiData?.current, true);
-                            return;
-                        }
-                    } catch (e) {
-                        console.error('Failed to parse cached weather', e);
+                    const cached = JSON.parse(cachedRaw);
+                    if (Date.now() - cached.timestamp <= CONFIG.CACHE_TTL_MS) {
+                        renderWeather(cached.weatherData, cached.aqiData, true);
+                        return;
                     }
                 }
-
-                renderWeather(null, null, null, false);
+                DOM.weatherDesc.textContent = 'Weather Unavailable';
+                applyBackgroundUrl(CONFIG.BACKGROUNDS.DAY_CLEAR);
             }
         }
 
-        /**
-         * =====================================================================
-         * INTERACTIVE KITCHEN / FOCUS TIMERS WITH TONE.JS CHIME
-         * =====================================================================
-         */
-        function playGentleChime() {
+        /* ==========================================================================
+           5. INTERACTIVE KITCHEN TIMERS & AMBIENT SOUNDSCAPES (TONE.JS)
+           ========================================================================== */
+        function playChime() {
             try {
-                if (typeof Tone === 'undefined') return;
-                if (Tone.context.state !== 'running') {
+                if (typeof Tone !== 'undefined') {
                     Tone.start();
+                    const synth = new Tone.PolySynth(Tone.Synth).toDestination();
+                    const now = Tone.now();
+                    synth.triggerAttackRelease('C5', '8n', now);
+                    synth.triggerAttackRelease('E5', '8n', now + 0.18);
+                    synth.triggerAttackRelease('G5', '4n', now + 0.36);
                 }
-                const synth = new Tone.PolySynth(Tone.Synth, {
-                    oscillator: { type: 'sine' },
-                    envelope: { attack: 0.05, decay: 0.4, sustain: 0.2, release: 1.5 }
-                }).toDestination();
-                synth.volume.value = -8;
-                const now = Tone.now();
-                synth.triggerAttackRelease('C5', '8n', now);
-                synth.triggerAttackRelease('E5', '8n', now + 0.18);
-                synth.triggerAttackRelease('G5', '4n', now + 0.36);
             } catch (e) {
-                console.debug('Audio chime blocked or unavailable:', e);
+                console.warn('Audio chime skipped:', e);
+            }
+        }
+
+        function stopAmbientSound() {
+            if (state.activeNoiseNode) {
+                try { state.activeNoiseNode.stop(); state.activeNoiseNode.dispose(); } catch (e) {}
+                state.activeNoiseNode = null;
+            }
+            if (state.activeFilterNode) {
+                try { state.activeFilterNode.dispose(); } catch (e) {}
+                state.activeFilterNode = null;
+            }
+        }
+
+        async function cycleAmbientSound() {
+            stopAmbientSound();
+            state.soundIndex = (state.soundIndex + 1) % CONFIG.CONTROLS.SOUND_PRESETS.length;
+            const preset = CONFIG.CONTROLS.SOUND_PRESETS[state.soundIndex];
+            DOM.soundStatusLabel.textContent = `Sound: ${preset}`;
+
+            if (preset === 'Off' || typeof Tone === 'undefined') return;
+
+            try {
+                await Tone.start();
+                if (preset === 'Brown Noise') {
+                    state.activeNoiseNode = new Tone.Noise('brown').toDestination();
+                    state.activeNoiseNode.volume.value = -16;
+                    state.activeNoiseNode.start();
+                } else if (preset === 'Soft Rain') {
+                    state.activeFilterNode = new Tone.Filter(800, 'lowpass').toDestination();
+                    state.activeNoiseNode = new Tone.Noise('pink').connect(state.activeFilterNode);
+                    state.activeNoiseNode.volume.value = -18;
+                    state.activeNoiseNode.start();
+                } else if (preset === 'White Noise') {
+                    state.activeNoiseNode = new Tone.Noise('white').toDestination();
+                    state.activeNoiseNode.volume.value = -24;
+                    state.activeNoiseNode.start();
+                }
+            } catch (e) {
+                console.warn('Ambient audio failed:', e);
             }
         }
 
         function startTimer(minutes) {
-            stopTimer();
-            // Unlock audio context on user tap
-            if (typeof Tone !== 'undefined' && Tone.context.state !== 'running') {
-                Tone.start().catch(() => {});
-            }
-
-            STATE.timerTotalLabel = `${minutes}m Timer`;
-            STATE.timerEndTime = Date.now() + minutes * 60 * 1000;
-            STATE.timerRinging = false;
-
-            DOM.timerLabel.textContent = STATE.timerTotalLabel;
-            DOM.activeTimerPill.classList.remove('hidden', 'animate-pulse', 'bg-rose-500/40', 'border-rose-400');
-            DOM.activeTimerPill.classList.add('bg-amber-500/20', 'border-amber-400/40');
-
+            clearInterval(state.timerInterval);
+            state.timerRemainingSec = minutes * 60;
+            DOM.activeTimerCard.classList.remove('hidden');
             updateTimerDisplay();
-            STATE.timerInterval = setInterval(updateTimerDisplay, 500);
-            hideControlBar();
+
+            state.timerInterval = setInterval(() => {
+                state.timerRemainingSec--;
+                if (state.timerRemainingSec <= 0) {
+                    clearInterval(state.timerInterval);
+                    DOM.timerDisplay.textContent = 'DONE!';
+                    playChime();
+                    setTimeout(() => DOM.activeTimerCard.classList.add('hidden'), 6000);
+                } else {
+                    updateTimerDisplay();
+                }
+            }, 1000);
         }
 
         function updateTimerDisplay() {
-            if (!STATE.timerEndTime) return;
-            const remainingMs = STATE.timerEndTime - Date.now();
-
-            if (remainingMs <= 0) {
-                DOM.timerCountdown.textContent = '00:00';
-                DOM.timerLabel.textContent = `${STATE.timerTotalLabel} Done!`;
-                if (!STATE.timerRinging) {
-                    STATE.timerRinging = true;
-                    DOM.activeTimerPill.classList.remove('bg-amber-500/20', 'border-amber-400/40');
-                    DOM.activeTimerPill.classList.add('bg-rose-500/40', 'border-rose-400', 'animate-pulse');
-                    playGentleChime();
-                } else if (Math.abs(remainingMs) % 4000 < 550) {
-                    playGentleChime();
-                }
-                return;
-            }
-
-            const totalSeconds = Math.ceil(remainingMs / 1000);
-            const mins = Math.floor(totalSeconds / 60).toString().padStart(2, '0');
-            const secs = (totalSeconds % 60).toString().padStart(2, '0');
-            DOM.timerCountdown.textContent = `${mins}:${secs}`;
+            const mins = Math.floor(state.timerRemainingSec / 60).toString().padStart(2, '0');
+            const secs = (state.timerRemainingSec % 60).toString().padStart(2, '0');
+            DOM.timerDisplay.textContent = `${mins}:${secs}`;
         }
 
-        function stopTimer() {
-            if (STATE.timerInterval) {
-                clearInterval(STATE.timerInterval);
-                STATE.timerInterval = null;
-            }
-            STATE.timerEndTime = null;
-            STATE.timerRinging = false;
-            DOM.activeTimerPill.classList.add('hidden');
+        /* ==========================================================================
+           6. TOUCH CONTROL BAR & DOUBLE-TAP BLACKOUT SCREEN
+           ========================================================================== */
+        function revealTouchControls() {
+            DOM.touchBar.classList.remove('opacity-0', 'pointer-events-none', 'translate-y-4');
+            clearTimeout(state.controlsHideTimeout);
+            state.controlsHideTimeout = setTimeout(() => {
+                DOM.touchBar.classList.add('opacity-0', 'pointer-events-none', 'translate-y-4');
+            }, CONFIG.CONTROLS.AUTO_HIDE_MS);
         }
 
-        /**
-         * =====================================================================
-         * TAP-TO-TOGGLE FLOATING CONTROL BAR
-         * =====================================================================
-         */
-        function showControlBar() {
-            DOM.controlBar.classList.remove('opacity-0', 'pointer-events-none', 'translate-y-4');
-            DOM.controlBar.classList.add('opacity-100', 'pointer-events-auto', 'translate-y-0');
-
-            clearTimeout(STATE.controlBarTimeout);
-            STATE.controlBarTimeout = setTimeout(hideControlBar, 7000);
+        function enterBlackoutMode() {
+            DOM.blackoutOverlay.classList.remove('hidden');
+            DOM.touchBar.classList.add('opacity-0', 'pointer-events-none', 'translate-y-4');
         }
 
-        function hideControlBar() {
-            DOM.controlBar.classList.add('opacity-0', 'pointer-events-none', 'translate-y-4');
-            DOM.controlBar.classList.remove('opacity-100', 'pointer-events-auto', 'translate-y-0');
+        function exitBlackoutMode(e) {
+            e.stopPropagation();
+            DOM.blackoutOverlay.classList.add('hidden');
         }
 
-        function setupControlBar() {
-            // Render quick timer preset buttons
-            const presetButtons = CONFIG.TIMERS.PRESETS_MINUTES.map(mins => `
-                <button type="button" data-timer-mins="${mins}" class="px-2.5 py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/35 border border-amber-400/30 active:scale-95 text-xs font-bold text-amber-200 transition">
-                    ${mins}m
-                </button>
-            `).join('');
-            DOM.timerPresetsGroup.insertAdjacentHTML('beforeend', presetButtons);
-
-            DOM.timerPresetsGroup.addEventListener('click', (e) => {
-                const btn = e.target.closest('[data-timer-mins]');
-                if (btn) {
-                    e.stopPropagation();
-                    startTimer(Number(btn.dataset.timerMins));
+        function setupTouchControls() {
+            document.body.addEventListener('click', (e) => {
+                if (!DOM.blackoutOverlay.classList.contains('hidden')) return;
+                if (!DOM.touchBar.contains(e.target)) {
+                    revealTouchControls();
                 }
             });
 
-            DOM.timerCancelBtn.addEventListener('click', (e) => {
+            document.body.addEventListener('dblclick', (e) => {
+                if (DOM.touchBar.contains(e.target) || e.target.closest('button')) return;
+                enterBlackoutMode();
+            });
+
+            DOM.blackoutOverlay.addEventListener('click', exitBlackoutMode);
+            DOM.btnBlackout.addEventListener('click', (e) => {
                 e.stopPropagation();
-                stopTimer();
+                enterBlackoutMode();
             });
 
-            // Switch City button
+            document.querySelectorAll('.timer-preset-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    startTimer(parseInt(btn.dataset.timer, 10));
+                    revealTouchControls();
+                });
+            });
+
+            DOM.cancelTimerBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                clearInterval(state.timerInterval);
+                DOM.activeTimerCard.classList.add('hidden');
+            });
+
+            DOM.btnToggleSound.addEventListener('click', (e) => {
+                e.stopPropagation();
+                cycleAmbientSound();
+                revealTouchControls();
+            });
+
             DOM.btnSwitchLocation.addEventListener('click', (e) => {
                 e.stopPropagation();
-                STATE.locationIndex = (STATE.locationIndex + 1) % CONFIG.LOCATIONS.length;
-                rebuildFormatters();
-                updateClock();
+                state.locationIndex = (state.locationIndex + 1) % CONFIG.LOCATIONS.length;
+                updateLocationDisplay();
                 fetchWeather();
-                showControlBar();
+                revealTouchControls();
             });
 
-            // Toggle 12h / 24h clock
             DOM.btnToggle24h.addEventListener('click', (e) => {
                 e.stopPropagation();
-                STATE.use24Hour = !STATE.use24Hour;
+                state.use24Hour = !state.use24Hour;
                 updateClock();
-                showControlBar();
+                revealTouchControls();
             });
 
-            // Cycle Wallpapers manually
             DOM.btnCycleBg.addEventListener('click', (e) => {
                 e.stopPropagation();
-                const bgKeys = Object.keys(CONFIG.BACKGROUNDS);
-                STATE.manualBgIndex = (STATE.manualBgIndex + 1) % bgKeys.length;
-                updateBackground(0, 1);
-                showControlBar();
+                const urls = Object.values(CONFIG.BACKGROUNDS);
+                state.manualBgIndex = (state.manualBgIndex + 1) % urls.length;
+                applyBackgroundUrl(urls[state.manualBgIndex]);
+                revealTouchControls();
             });
 
-            // Manual Night Mode toggle
             DOM.btnToggleNight.addEventListener('click', (e) => {
                 e.stopPropagation();
-                const currentlyDimmed = DOM.root.style.filter.includes(`brightness(${CONFIG.NIGHT_MODE.BRIGHTNESS})`);
-                STATE.manualNightOverride = !currentlyDimmed;
-                updateClock();
-                showControlBar();
+                const currentlyNight = document.body.classList.contains('is-night-mode');
+                state.nightModeOverride = !currentlyNight;
+                updateNightMode();
+                revealTouchControls();
             });
 
-            // Force Weather Refresh
             DOM.btnRefreshWeather.addEventListener('click', (e) => {
                 e.stopPropagation();
+                DOM.weatherDesc.textContent = 'Refreshing...';
                 fetchWeather();
-                hideControlBar();
-            });
-
-            // Tap anywhere on the screen to reveal controls
-            document.body.addEventListener('click', () => {
-                showControlBar();
+                revealTouchControls();
             });
         }
 
-        /**
-         * =====================================================================
-         * INITIALIZATION LIFECYCLE
-         * =====================================================================
-         */
-        function initDashboard() {
-            rebuildFormatters();
-
-            const loc = getActiveLocation();
-            DOM.weatherLocation.textContent = loc.NAME;
-            DOM.bgLayer1.src = CONFIG.BACKGROUNDS.DEFAULT;
-
-            // Hardware protection & touch controls
-            requestWakeLock();
-            document.addEventListener('visibilitychange', () => {
-                if (document.visibilityState === 'visible') requestWakeLock();
-            });
-            startPixelShift();
-            setupControlBar();
-
-            // Clock tick based on CONFIG.CLOCK_INTERVAL_MS
+        /* ==========================================================================
+           7. INITIALIZATION
+           ========================================================================== */
+        function init() {
+            updateLocationDisplay();
             updateClock();
-            setInterval(updateClock, CONFIG.CLOCK_INTERVAL_MS);
+            updateNextEvent();
+            updateNightMode();
+            initWakeLock();
+            setupTouchControls();
+            updateNetworkStatus();
 
-            // Fetch weather immediately, then per CONFIG.WEATHER_INTERVAL_MS without page reloads
+            applyBackgroundUrl(CONFIG.BACKGROUNDS.DAY_CLEAR);
             fetchWeather();
+
+            setInterval(() => {
+                updateClock();
+                if (new Date().getSeconds() === 0) {
+                    updateNightMode();
+                    updateNextEvent();
+                }
+            }, CONFIG.CLOCK_INTERVAL_MS);
+
             setInterval(fetchWeather, CONFIG.WEATHER_INTERVAL_MS);
+            setInterval(runPixelShift, CONFIG.PIXEL_SHIFT.INTERVAL_MS);
+
+            window.addEventListener('online', () => {
+                updateNetworkStatus();
+                fetchWeather();
+            });
+            window.addEventListener('offline', updateNetworkStatus);
+
+            document.addEventListener('visibilitychange', () => {
+                if (document.visibilityState === 'visible') {
+                    updateClock();
+                    updateNightMode();
+                    initWakeLock();
+                }
+            });
         }
 
-        window.addEventListener('DOMContentLoaded', initDashboard);
+        window.addEventListener('DOMContentLoaded', init);
     </script>
 </body>
 </html>
