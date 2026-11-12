@@ -3,29 +3,38 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <!-- Auto-reloads the page entirely every 30 seconds as requested -->
-    <meta http-equiv="refresh" content="30">
     <title>Echo Show Dashboard</title>
     
     <!-- Tailwind CSS for rapid styling -->
     <script src="https://cdn.tailwindcss.com"></script>
     
     <style>
-        /* Custom text shadow for extreme legibility over various background colors */
+        /* 1. CSS Imports placed at the very top of style block */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&display=swap');
+
+        /* 2. System Fallback Font Stack */
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #0b0f17;
+        }
+
+        /* Heavy text shadow for high contrast over any background wallpaper */
         .text-shadow-heavy {
-            text-shadow: 0 4px 12px rgba(0, 0, 0, 0.7), 0 0 40px rgba(0,0,0,0.6);
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.85), 0 0 35px rgba(0, 0, 0, 0.7);
         }
 
-        /* Subtle fade-in to make the 30-second reloads slightly less jarring */
-        @keyframes fadeIn {
-            from { opacity: 0.6; }
-            to { opacity: 1; }
-        }
-        body { 
-            animation: fadeIn 0.8s ease-out forwards; 
+        /* Cross-fading background layer styling */
+        .bg-layer {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: opacity 1.2s ease-in-out;
+            will-change: opacity;
         }
 
-        /* Equalizer wave animation for the Now Playing widget */
+        /* Equalizer bar wave animation */
         @keyframes soundBars {
             0%, 100% { height: 4px; }
             50% { height: 18px; }
@@ -35,51 +44,66 @@
         .bar-3 { animation: soundBars 1.3s ease-in-out infinite 0.4s; }
         .bar-4 { animation: soundBars 0.9s ease-in-out infinite 0.1s; }
 
-        /* Smooth cross-fade between background changes */
-        #bg-image {
-            transition: opacity 0.8s ease-in-out;
+        /* Subtle pulse for live status dot */
+        @keyframes pulseDot {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.4; transform: scale(0.9); }
+        }
+        .dot-pulse {
+            animation: pulseDot 2s ease-in-out infinite;
         }
 
-        /* Google Font for a modern digital look */
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;500;700;900&display=swap');
-        body {
-            font-family: 'Inter', sans-serif;
+        /* 3. Reduced Motion accessibility overrides */
+        @media (prefers-reduced-motion: reduce) {
+            .bg-layer {
+                transition: none !important;
+            }
+            .bar-1, .bar-2, .bar-3, .bar-4, .dot-pulse {
+                animation: none !important;
+            }
+            * {
+                transition-duration: 0.01ms !important;
+            }
         }
     </style>
 </head>
 <body class="h-screen w-screen overflow-hidden text-white bg-black select-none">
 
-    <!-- High-quality dynamic background loaded based on weather & time -->
-    <img 
-        id="bg-image"
-        src="https://images.unsplash.com/photo-1506744626753-1fa44df31c28?q=80&w=1920&auto=format&fit=crop" 
-        alt="Weather Background" 
-        class="absolute inset-0 w-full h-full object-cover z-0 transition-all duration-1000 scale-105" 
-    />
+    <!-- Preloaded dual-layer cross-fading background -->
+    <div id="bg-container" class="absolute inset-0 z-0 overflow-hidden bg-gradient-to-br from-slate-900 via-gray-900 to-black">
+        <img id="bg-layer-1" class="bg-layer opacity-100 scale-105" alt="Dynamic weather wallpaper 1" src="https://images.unsplash.com/photo-1506744626753-1fa44df31c28?q=80&w=1920&auto=format&fit=crop" />
+        <img id="bg-layer-2" class="bg-layer opacity-0 scale-105" alt="Dynamic weather wallpaper 2" src="" />
+    </div>
 
-    <!-- Translucent Overlay to ensure text readability -->
-    <div class="absolute inset-0 bg-gradient-to-b from-black/50 via-black/25 to-black/75 z-10 pointer-events-none"></div>
+    <!-- Gradient overlay ensuring maximum readability in any lighting condition -->
+    <div class="absolute inset-0 bg-gradient-to-b from-black/55 via-black/25 to-black/80 z-10 pointer-events-none"></div>
 
     <!-- Main Content Container -->
-    <div class="relative z-20 flex flex-col justify-between h-full p-[clamp(1rem,3.5vw,3rem)]">
+    <main class="relative z-20 flex flex-col justify-between h-full p-[clamp(1rem,3.5vw,3rem)]">
         
-        <!-- Top Section: Now Playing Widget (Left) & Weather Widget (Right) -->
-        <div class="flex flex-row justify-between items-start w-full gap-4">
+        <!-- TOP ROW: Media Status Widget & Current Weather -->
+        <header class="flex flex-row justify-between items-start w-full gap-4">
             
-            <!-- Now Playing Media Status Widget -->
-            <div id="media-widget" class="flex items-center gap-3 bg-black/45 backdrop-blur-md border border-white/10 rounded-2xl p-2.5 sm:p-3 shadow-2xl max-w-[280px] sm:max-w-xs transition-all">
-                <div class="relative flex-shrink-0 w-12 h-12 sm:w-14 sm:h-14 rounded-xl overflow-hidden shadow-md">
-                    <img id="media-art" src="https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?q=80&w=300&auto=format&fit=crop" alt="Album Art" class="w-full h-full object-cover" />
-                    <div class="absolute inset-0 bg-black/10"></div>
+            <!-- Accessible "Now Playing" Media Widget -->
+            <section id="media-widget" 
+                     class="flex items-center gap-3 bg-black/45 backdrop-blur-md border border-white/10 rounded-2xl p-2.5 sm:p-3 shadow-2xl max-w-[280px] sm:max-w-xs transition-all"
+                     aria-label="Now Playing Media Player" 
+                     aria-live="polite">
+                <div class="relative flex-shrink-0 w-12 h-12 sm:w-14 sm:h-14 rounded-xl overflow-hidden shadow-md bg-white/10">
+                    <img id="media-art" 
+                         src="https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?q=80&w=300&auto=format&fit=crop" 
+                         alt="Album artwork" 
+                         class="w-full h-full object-cover transition-opacity duration-300" />
+                    <div id="media-art-fallback" class="hidden absolute inset-0 flex items-center justify-center text-xl text-gray-400 bg-gray-800" aria-hidden="true">🎵</div>
                 </div>
                 <div class="flex-1 min-w-0 pr-1">
                     <div class="flex items-center justify-between gap-1">
-                        <span class="text-[10px] uppercase tracking-wider font-semibold text-emerald-400 flex items-center gap-1.5">
-                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                            Now Playing
+                        <span id="media-status-badge" class="text-[10px] uppercase tracking-wider font-semibold text-emerald-400 flex items-center gap-1.5">
+                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 dot-pulse" aria-hidden="true"></span>
+                            <span>Now Playing</span>
                         </span>
-                        <!-- Animated mini sound wave bars -->
-                        <div class="flex items-end gap-0.5 h-4">
+                        <!-- Equalizer Animation Bars -->
+                        <div id="media-eq" class="flex items-end gap-0.5 h-4" aria-hidden="true">
                             <div class="w-0.5 bg-emerald-400 rounded-full bar-1"></div>
                             <div class="w-0.5 bg-emerald-400 rounded-full bar-2"></div>
                             <div class="w-0.5 bg-emerald-400 rounded-full bar-3"></div>
@@ -88,213 +112,413 @@
                     </div>
                     <div id="media-title" class="text-xs sm:text-sm font-semibold truncate text-white mt-0.5">Midnight City</div>
                     <div id="media-artist" class="text-[11px] sm:text-xs text-gray-300 truncate">M83</div>
-                    <!-- Audio Progress bar -->
-                    <div class="w-full bg-white/20 h-1 rounded-full mt-1.5 overflow-hidden">
+                    <!-- Audio Progress Bar -->
+                    <div id="media-progress-bar-container" class="w-full bg-white/20 h-1 rounded-full mt-1.5 overflow-hidden">
                         <div id="media-progress" class="bg-white/80 h-full rounded-full transition-all duration-1000" style="width: 58%;"></div>
                     </div>
                 </div>
-            </div>
+            </section>
 
-            <!-- Current Weather Widget (Teaneck, NJ) -->
-            <div class="text-right text-shadow-heavy flex-shrink-0">
+            <!-- Current Weather Widget -->
+            <section id="current-weather" 
+                     class="text-right text-shadow-heavy flex-shrink-0"
+                     aria-label="Current Weather Information" 
+                     aria-live="polite">
                 <div class="flex items-center justify-end gap-2 md:gap-3 flex-wrap">
-                    <span id="weather-icon" class="text-[clamp(2.5rem,5.5vw,4.5rem)] leading-none"></span>
+                    <span id="weather-icon" class="text-[clamp(2.5rem,5.5vw,4.5rem)] leading-none" aria-hidden="true">⛅</span>
                     <div id="weather-temp" class="text-[clamp(3rem,7vw,6rem)] font-bold tracking-tighter leading-none">--°</div>
                 </div>
-                <div id="weather-desc" class="text-[clamp(1rem,3vw,2rem)] font-medium mt-1">Fetching weather...</div>
-                <div class="text-[clamp(0.75rem,2vw,1.1rem)] text-gray-200 opacity-80 font-light tracking-wide uppercase">Teaneck, NJ</div>
-            </div>
-        </div>
+                <div id="weather-desc" class="text-[clamp(1rem,3vw,2rem)] font-medium mt-1">Loading weather...</div>
+                <div class="flex items-center justify-end gap-1.5 text-[clamp(0.75rem,2vw,1.1rem)] text-gray-200 opacity-80 font-light tracking-wide uppercase">
+                    <span id="offline-indicator" class="hidden text-amber-400 font-bold" title="Cached data">(Cached)</span>
+                    <span>Teaneck, NJ</span>
+                </div>
+            </section>
+        </header>
 
-        <!-- Bottom Section: Time/Date and Daily Forecast -->
-        <div class="flex flex-wrap justify-between items-end gap-6 md:gap-8 mt-auto text-shadow-heavy w-full">
+        <!-- BOTTOM ROW: Clock & 3-Day Forecast -->
+        <footer class="flex flex-wrap justify-between items-end gap-6 md:gap-8 mt-auto text-shadow-heavy w-full">
             
-            <!-- Left: Time and Date -->
-            <div class="flex-shrink-0">
+            <!-- Clock and Date Section -->
+            <section id="clock-section" 
+                     class="flex-shrink-0" 
+                     aria-label="Current Time and Date" 
+                     aria-live="polite">
                 <div class="flex items-baseline gap-2 md:gap-4">
-                    <div id="time" class="text-[clamp(4.5rem,18vw,12rem)] font-black leading-none tracking-tight">--:--</div>
-                    <div id="ampm" class="text-[clamp(1.5rem,6vw,3rem)] font-bold mb-2 md:mb-4 opacity-90"></div>
+                    <time id="time" class="text-[clamp(4.5rem,18vw,12rem)] font-black leading-none tracking-tight">--:--</time>
+                    <span id="ampm" class="text-[clamp(1.5rem,6vw,3rem)] font-bold mb-2 md:mb-4 opacity-90"></span>
                 </div>
                 <div id="date" class="text-[clamp(1.25rem,4vw,2.5rem)] font-medium mt-2 text-gray-100 pl-1 md:pl-2 opacity-90">---</div>
-            </div>
+            </section>
 
-            <!-- Right: Next Few Days Forecast -->
-            <div id="forecast-container" class="flex flex-wrap justify-end gap-2 md:gap-4 pb-1 md:pb-2">
-                <!-- Forecast items injected via JS -->
-            </div>
-        </div>
+            <!-- 3-Day Daily Forecast Section -->
+            <nav id="forecast-section" aria-label="3-day weather forecast">
+                <div id="forecast-container" class="flex flex-wrap justify-end gap-2 md:gap-4 pb-1 md:pb-2">
+                    <!-- Forecast items injected via JS -->
+                </div>
+            </nav>
+        </footer>
 
-    </div>
+    </main>
 
     <script>
         /**
-         * Updates the clock and date every second so it stays accurate 
-         * between the 30-second hard reloads.
+         * Configuration & Constants
          */
-        function updateTime() {
-            const now = new Date();
-            let hours = now.getHours();
-            const minutes = now.getMinutes().toString().padStart(2, '0');
-            const ampm = hours >= 12 ? 'PM' : 'AM';
-            
-            hours = hours % 12;
-            hours = hours ? hours : 12; // Handle midnight (0 hours)
-
-            document.getElementById('time').textContent = `${hours}:${minutes}`;
-            document.getElementById('ampm').textContent = ampm;
-
-            const options = { weekday: 'long', month: 'long', day: 'numeric' };
-            document.getElementById('date').textContent = now.toLocaleDateString('en-US', options);
-        }
+        const CONFIG = {
+            LAT: 40.8976,
+            LON: -74.0154,
+            TIMEZONE: 'America/New_York',
+            WEATHER_INTERVAL_MS: 10 * 60 * 1000, // 10 minutes
+            FETCH_TIMEOUT_MS: 8000,              // 8-second fetch timeout
+            STORAGE_KEY: 'echo_dashboard_weather_cache'
+        };
 
         /**
-         * Fetches current weather and daily forecast data from the free Open-Meteo API.
-         * Default Coordinates: Teaneck, NJ (40.8976, -74.0154)
+         * Curated Wallpaper Library
          */
-        async function fetchWeather() {
-            try {
-                const lat = 40.8976;
-                const lon = -74.0154;
-                // Added is_day parameter to accurately determine daylight vs night conditions
-                const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code,is_day&daily=weather_code,temperature_2m_max,temperature_2m_min&temperature_unit=fahrenheit&timezone=America%2FNew_York&forecast_days=4`;
-
-                const response = await fetch(url);
-                const data = await response.json();
-
-                if (data && data.current) {
-                    const temp = Math.round(data.current.temperature_2m);
-                    const code = data.current.weather_code;
-                    const isDay = data.current.is_day !== 0;
-                    const weatherInfo = getWeatherDescription(code);
-
-                    document.getElementById('weather-temp').textContent = `${temp}°`;
-                    document.getElementById('weather-desc').textContent = weatherInfo.text;
-                    document.getElementById('weather-icon').textContent = weatherInfo.icon;
-
-                    // Update dynamic background to match weather & day/night cycle
-                    updateDynamicBackground(code, isDay);
-                }
-
-                if (data && data.daily) {
-                    const forecastContainer = document.getElementById('forecast-container');
-                    forecastContainer.innerHTML = '';
-                    
-                    // Loop through the next 3 days (indices 1, 2, 3)
-                    for(let i = 1; i < 4; i++) {
-                        const dateStr = data.daily.time[i];
-                        // Append time to ensure local timezone parsing doesn't shift the day
-                        const dateObj = new Date(dateStr + "T00:00:00");
-                        const dayName = dateObj.toLocaleDateString('en-US', { weekday: 'short' });
-                        const maxTemp = Math.round(data.daily.temperature_2m_max[i]);
-                        const minTemp = Math.round(data.daily.temperature_2m_min[i]);
-                        const code = data.daily.weather_code[i];
-                        const icon = getWeatherDescription(code).icon;
-
-                        const forecastHTML = `
-                            <div class="flex flex-col items-center bg-black/40 rounded-xl p-[clamp(0.5rem,2vw,1rem)] backdrop-blur-sm border border-white/10 shadow-lg min-w-[70px] md:min-w-[100px]">
-                                <div class="text-[clamp(0.875rem,2.5vw,1.5rem)] font-medium text-gray-200 tracking-wide">${dayName}</div>
-                                <div class="text-[clamp(1.5rem,4vw,2.5rem)] my-1 md:my-3">${icon}</div>
-                                <div class="text-[clamp(0.875rem,3vw,1.25rem)] font-bold whitespace-nowrap">${maxTemp}° <span class="text-gray-400 font-normal ml-1">${minTemp}°</span></div>
-                            </div>
-                        `;
-                        forecastContainer.innerHTML += forecastHTML;
-                    }
-                }
-
-            } catch (error) {
-                console.error('Failed to fetch weather data:', error);
-                document.getElementById('weather-desc').textContent = 'Weather Unavailable';
-            }
-        }
+        const BACKGROUNDS = {
+            thunder: 'https://images.unsplash.com/photo-1605721911519-3dfeb3be25e7?q=80&w=1920&auto=format&fit=crop',
+            rain: 'https://images.unsplash.com/photo-1534274988757-a28bf1a57c17?q=80&w=1920&auto=format&fit=crop',
+            snow: 'https://images.unsplash.com/photo-1491002052546-bf38f186af56?q=80&w=1920&auto=format&fit=crop',
+            fog: 'https://images.unsplash.com/photo-1487621167305-5d248087c724?q=80&w=1920&auto=format&fit=crop',
+            clearDay: 'https://images.unsplash.com/photo-1506744626753-1fa44df31c28?q=80&w=1920&auto=format&fit=crop',
+            clearNight: 'https://images.unsplash.com/photo-1509773896068-7fd415d91e2e?q=80&w=1920&auto=format&fit=crop',
+            cloudyDay: 'https://images.unsplash.com/photo-1534088568595-a066f410bcda?q=80&w=1920&auto=format&fit=crop',
+            cloudyNight: 'https://images.unsplash.com/photo-1532978379173-523e16f371f2?q=80&w=1920&auto=format&fit=crop'
+        };
 
         /**
-         * Maps WMO weather codes to descriptive text and emojis
+         * Cache DOM references once to boost performance on lower-power devices
+         */
+        const DOM = {
+            time: document.getElementById('time'),
+            ampm: document.getElementById('ampm'),
+            date: document.getElementById('date'),
+            weatherTemp: document.getElementById('weather-temp'),
+            weatherDesc: document.getElementById('weather-desc'),
+            weatherIcon: document.getElementById('weather-icon'),
+            offlineIndicator: document.getElementById('offline-indicator'),
+            forecastContainer: document.getElementById('forecast-container'),
+            bgLayer1: document.getElementById('bg-layer-1'),
+            bgLayer2: document.getElementById('bg-layer-2'),
+            mediaWidget: document.getElementById('media-widget'),
+            mediaArt: document.getElementById('media-art'),
+            mediaArtFallback: document.getElementById('media-art-fallback'),
+            mediaTitle: document.getElementById('media-title'),
+            mediaArtist: document.getElementById('media-artist'),
+            mediaStatusBadge: document.getElementById('media-status-badge'),
+            mediaEq: document.getElementById('media-eq'),
+            mediaProgress: document.getElementById('media-progress'),
+            mediaProgressContainer: document.getElementById('media-progress-bar-container')
+        };
+
+        // Track active background layer for cross-fades
+        let activeBgLayer = 1;
+        let currentBgUrl = '';
+
+        /**
+         * Intl formatters for consistent, localized date & time rendering
+         */
+        const timeFormatter = new Intl.DateTimeFormat('en-US', {
+            hour: 'numeric',
+            minute: '2-digit',
+            hour12: true
+        });
+
+        const dateFormatter = new Intl.DateTimeFormat('en-US', {
+            weekday: 'long',
+            month: 'long',
+            day: 'numeric'
+        });
+
+        const weekdayFormatter = new Intl.DateTimeFormat('en-US', {
+            weekday: 'short'
+        });
+
+        /**
+         * Maps WMO weather code to descriptive text and emojis
          */
         function getWeatherDescription(code) {
             const map = {
-                0:  { text: 'Clear sky', icon: '☀️' },
-                1:  { text: 'Mainly clear', icon: '🌤️' },
-                2:  { text: 'Partly cloudy', icon: '⛅' },
+                0:  { text: 'Clear Sky', icon: '☀️' },
+                1:  { text: 'Mainly Clear', icon: '🌤️' },
+                2:  { text: 'Partly Cloudy', icon: '⛅' },
                 3:  { text: 'Overcast', icon: '☁️' },
                 45: { text: 'Fog', icon: '🌫️' },
-                48: { text: 'Rime fog', icon: '🌫️' },
-                51: { text: 'Light drizzle', icon: '🌧️' },
-                53: { text: 'Moderate drizzle', icon: '🌧️' },
-                55: { text: 'Dense drizzle', icon: '🌧️' },
-                61: { text: 'Slight rain', icon: '🌧️' },
-                63: { text: 'Moderate rain', icon: '🌧️' },
-                65: { text: 'Heavy rain', icon: '🌧️' },
-                71: { text: 'Slight snow', icon: '❄️' },
-                73: { text: 'Moderate snow', icon: '❄️' },
-                75: { text: 'Heavy snow', icon: '❄️' },
-                77: { text: 'Snow grains', icon: '❄️' },
-                80: { text: 'Slight showers', icon: '🌦️' },
-                81: { text: 'Moderate showers', icon: '🌦️' },
-                82: { text: 'Violent showers', icon: '⛈️' },
+                48: { text: 'Rime Fog', icon: '🌫️' },
+                51: { text: 'Light Drizzle', icon: '🌧️' },
+                53: { text: 'Moderate Drizzle', icon: '🌧️' },
+                55: { text: 'Dense Drizzle', icon: '🌧️' },
+                61: { text: 'Slight Rain', icon: '🌧️' },
+                63: { text: 'Moderate Rain', icon: '🌧️' },
+                65: { text: 'Heavy Rain', icon: '🌧️' },
+                71: { text: 'Slight Snow', icon: '❄️' },
+                73: { text: 'Moderate Snow', icon: '❄️' },
+                75: { text: 'Heavy Snow', icon: '❄️' },
+                77: { text: 'Snow Grains', icon: '❄️' },
+                80: { text: 'Slight Showers', icon: '🌦️' },
+                81: { text: 'Moderate Showers', icon: '🌦️' },
+                82: { text: 'Violent Showers', icon: '⛈️' },
                 95: { text: 'Thunderstorm', icon: '⛈️' },
-                96: { text: 'Thunderstorm & hail', icon: '⛈️' },
-                99: { text: 'Heavy thunderstorm', icon: '⛈️' }
+                96: { text: 'Thunderstorm & Hail', icon: '⛈️' },
+                99: { text: 'Severe Thunderstorm', icon: '⛈️' }
             };
-            return map[code] || { text: 'Unknown', icon: '🌡️' };
+            return map[code] || { text: 'Unknown Conditions', icon: '🌡️' };
         }
 
         /**
-         * Selects a curated high-res wallpaper depending on current weather condition and daylight.
+         * 1. Smart Clock Loop - runs every second without full-page reloads
          */
-        function updateDynamicBackground(code, isDay) {
-            const bgElement = document.getElementById('bg-image');
+        function updateClock() {
+            const now = new Date();
+            const timeParts = timeFormatter.formatToParts(now);
             
-            // Image library mapped to weather types and day/night
-            const backgrounds = {
-                thunder: 'https://images.unsplash.com/photo-1605721911519-3dfeb3be25e7?q=80&w=1920&auto=format&fit=crop',
-                rain: 'https://images.unsplash.com/photo-1534274988757-a28bf1a57c17?q=80&w=1920&auto=format&fit=crop',
-                snow: 'https://images.unsplash.com/photo-1491002052546-bf38f186af56?q=80&w=1920&auto=format&fit=crop',
-                fog: 'https://images.unsplash.com/photo-1487621167305-5d248087c724?q=80&w=1920&auto=format&fit=crop',
-                clearDay: 'https://images.unsplash.com/photo-1506744626753-1fa44df31c28?q=80&w=1920&auto=format&fit=crop',
-                clearNight: 'https://images.unsplash.com/photo-1509773896068-7fd415d91e2e?q=80&w=1920&auto=format&fit=crop',
-                cloudyDay: 'https://images.unsplash.com/photo-1534088568595-a066f410bcda?q=80&w=1920&auto=format&fit=crop',
-                cloudyNight: 'https://images.unsplash.com/photo-1532978379173-523e16f371f2?q=80&w=1920&auto=format&fit=crop'
+            const hour = timeParts.find(p => p.type === 'hour')?.value || '';
+            const minute = timeParts.find(p => p.type === 'minute')?.value || '';
+            const dayPeriod = timeParts.find(p => p.type === 'dayPeriod')?.value || '';
+
+            DOM.time.textContent = `${hour}:${minute}`;
+            DOM.ampm.textContent = dayPeriod;
+            DOM.date.textContent = dateFormatter.format(now);
+        }
+
+        /**
+         * 2. Preloads image before executing smooth opacity cross-fade
+         */
+        function preloadAndSwapBackground(newUrl) {
+            if (!newUrl || newUrl === currentBgUrl) return;
+
+            const preloader = new Image();
+            preloader.onload = () => {
+                const incomingLayer = activeBgLayer === 1 ? DOM.bgLayer2 : DOM.bgLayer1;
+                const outgoingLayer = activeBgLayer === 1 ? DOM.bgLayer1 : DOM.bgLayer2;
+
+                incomingLayer.src = newUrl;
+                incomingLayer.classList.remove('opacity-0');
+                incomingLayer.classList.add('opacity-100');
+
+                outgoingLayer.classList.remove('opacity-100');
+                outgoingLayer.classList.add('opacity-0');
+
+                activeBgLayer = activeBgLayer === 1 ? 2 : 1;
+                currentBgUrl = newUrl;
             };
 
-            let chosenUrl = backgrounds.clearDay;
+            preloader.onerror = () => {
+                console.warn('Background image failed to load; keeping existing background.');
+            };
+
+            preloader.src = newUrl;
+        }
+
+        /**
+         * 3. Selects contextual wallpaper based on condition and daylight
+         */
+        function updateBackground(code, isDay) {
+            let targetUrl = BACKGROUNDS.clearDay;
 
             if ([95, 96, 99].includes(code)) {
-                chosenUrl = backgrounds.thunder;
+                targetUrl = BACKGROUNDS.thunder;
             } else if ([51, 53, 55, 61, 63, 65, 80, 81, 82].includes(code)) {
-                chosenUrl = backgrounds.rain;
+                targetUrl = BACKGROUNDS.rain;
             } else if ([71, 73, 75, 77].includes(code)) {
-                chosenUrl = backgrounds.snow;
+                targetUrl = BACKGROUNDS.snow;
             } else if ([45, 48].includes(code)) {
-                chosenUrl = backgrounds.fog;
+                targetUrl = BACKGROUNDS.fog;
             } else if ([1, 2, 3].includes(code)) {
-                chosenUrl = isDay ? backgrounds.cloudyDay : backgrounds.cloudyNight;
+                targetUrl = isDay ? BACKGROUNDS.cloudyDay : BACKGROUNDS.cloudyNight;
             } else {
-                chosenUrl = isDay ? backgrounds.clearDay : backgrounds.clearNight;
+                targetUrl = isDay ? BACKGROUNDS.clearDay : BACKGROUNDS.clearNight;
             }
 
-            if (bgElement.src !== chosenUrl) {
-                bgElement.src = chosenUrl;
+            preloadAndSwapBackground(targetUrl);
+        }
+
+        /**
+         * 4. Renders current weather UI
+         */
+        function renderWeather(current, isCached = false) {
+            if (!current) {
+                DOM.weatherDesc.textContent = 'Weather Unavailable';
+                DOM.weatherTemp.textContent = '--°';
+                DOM.weatherIcon.textContent = '⚠️';
+                return;
+            }
+
+            const temp = Math.round(current.temperature_2m);
+            const code = current.weather_code;
+            const isDay = current.is_day !== 0;
+            const weatherInfo = getWeatherDescription(code);
+
+            DOM.weatherTemp.textContent = `${temp}°`;
+            DOM.weatherDesc.textContent = weatherInfo.text;
+            DOM.weatherIcon.textContent = weatherInfo.icon;
+            DOM.offlineIndicator.classList.toggle('hidden', !isCached);
+
+            updateBackground(code, isDay);
+        }
+
+        /**
+         * 5. Renders 3-day forecast with bounds checking and single innerHTML assignment
+         */
+        function renderForecast(daily) {
+            if (!daily || !Array.isArray(daily.time) || daily.time.length < 2) {
+                DOM.forecastContainer.innerHTML = '<div class="text-sm text-gray-300">Forecast unavailable</div>';
+                return;
+            }
+
+            let forecastHtml = '';
+            const maxDays = Math.min(4, daily.time.length);
+
+            for (let i = 1; i < maxDays; i++) {
+                const dateStr = daily.time[i];
+                if (!dateStr) continue;
+
+                // Create localized date using Intl
+                const dateObj = new Date(`${dateStr}T12:00:00`);
+                const dayName = isNaN(dateObj.getTime()) ? `Day ${i}` : weekdayFormatter.format(dateObj);
+                const maxTemp = Math.round(daily.temperature_2m_max?.[i] ?? 0);
+                const minTemp = Math.round(daily.temperature_2m_min?.[i] ?? 0);
+                const code = daily.weather_code?.[i] ?? 0;
+                const weatherInfo = getWeatherDescription(code);
+
+                forecastHtml += `
+                    <div class="flex flex-col items-center bg-black/40 rounded-xl p-[clamp(0.5rem,2vw,1rem)] backdrop-blur-sm border border-white/10 shadow-lg min-w-[70px] md:min-w-[100px]"
+                         role="group" 
+                         aria-label="${dayName}: ${weatherInfo.text}, High ${maxTemp}°, Low ${minTemp}°">
+                        <div class="text-[clamp(0.875rem,2.5vw,1.5rem)] font-medium text-gray-200 tracking-wide">${dayName}</div>
+                        <div class="text-[clamp(1.5rem,4vw,2.5rem)] my-1 md:my-3" aria-hidden="true">${weatherInfo.icon}</div>
+                        <div class="text-[clamp(0.875rem,3vw,1.25rem)] font-bold whitespace-nowrap">
+                            ${maxTemp}° <span class="text-gray-400 font-normal ml-1">${minTemp}°</span>
+                        </div>
+                    </div>
+                `;
+            }
+
+            DOM.forecastContainer.innerHTML = forecastHtml;
+        }
+
+        /**
+         * 6. Weather fetching with AbortController, timeout, and localStorage caching
+         */
+        async function fetchWeather() {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), CONFIG.FETCH_TIMEOUT_MS);
+
+            const url = `https://api.open-meteo.com/v1/forecast?latitude=${CONFIG.LAT}&longitude=${CONFIG.LON}&current=temperature_2m,weather_code,is_day&daily=weather_code,temperature_2m_max,temperature_2m_min&temperature_unit=fahrenheit&timezone=${encodeURIComponent(CONFIG.TIMEZONE)}&forecast_days=4`;
+
+            try {
+                const response = await fetch(url, { signal: controller.signal });
+                clearTimeout(timeoutId);
+
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const data = await response.json();
+
+                if (data && data.current) {
+                    // Update cache
+                    localStorage.setItem(CONFIG.STORAGE_KEY, JSON.stringify({
+                        data,
+                        timestamp: Date.now()
+                    }));
+
+                    renderWeather(data.current, false);
+                    renderForecast(data.daily);
+                }
+            } catch (error) {
+                console.warn('Weather fetch failed, falling back to cache:', error);
+                
+                // Fallback to cache
+                const cachedRaw = localStorage.getItem(CONFIG.STORAGE_KEY);
+                if (cachedRaw) {
+                    try {
+                        const cached = JSON.parse(cachedRaw);
+                        if (cached && cached.data) {
+                            renderWeather(cached.data.current, true);
+                            renderForecast(cached.data.daily);
+                            return;
+                        }
+                    } catch (e) {
+                        console.error('Failed to parse cached weather', e);
+                    }
+                }
+
+                // If cache is empty or invalid
+                renderWeather(null, false);
+                renderForecast(null);
             }
         }
 
         /**
-         * Simulates progress and demo updates for the Now Playing widget.
-         * Ready to be replaced by a fetch() call to Spotify Web API, Home Assistant, or WebSockets.
+         * 7. Media Widget State & Animations
          */
-        function initMediaProgress() {
-            let progress = 58;
-            setInterval(() => {
-                progress = (progress + 0.5) % 100;
-                const bar = document.getElementById('media-progress');
-                if (bar) bar.style.width = `${progress}%`;
+        let mediaInterval = null;
+
+        function setMediaState(mediaData) {
+            if (!mediaData || !mediaData.isPlaying) {
+                // Idle / Disconnected State
+                DOM.mediaTitle.textContent = 'No media playing';
+                DOM.mediaArtist.textContent = 'Connect via Spotify / Bluetooth';
+                DOM.mediaStatusBadge.innerHTML = `<span class="text-gray-400">Idle</span>`;
+                DOM.mediaEq.classList.add('hidden');
+                DOM.mediaProgressContainer.classList.add('hidden');
+                DOM.mediaArt.classList.add('hidden');
+                DOM.mediaArtFallback.classList.remove('hidden');
+                if (mediaInterval) clearInterval(mediaInterval);
+                return;
+            }
+
+            // Active Playing State
+            DOM.mediaTitle.textContent = mediaData.title;
+            DOM.mediaArtist.textContent = mediaData.artist;
+            DOM.mediaStatusBadge.innerHTML = `
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 dot-pulse" aria-hidden="true"></span>
+                <span>Now Playing</span>
+            `;
+            DOM.mediaEq.classList.remove('hidden');
+            DOM.mediaProgressContainer.classList.remove('hidden');
+            
+            if (mediaData.artworkUrl) {
+                DOM.mediaArt.src = mediaData.artworkUrl;
+                DOM.mediaArt.classList.remove('hidden');
+                DOM.mediaArtFallback.classList.add('hidden');
+            } else {
+                DOM.mediaArt.classList.add('hidden');
+                DOM.mediaArtFallback.classList.remove('hidden');
+            }
+
+            // Simulate progress track loop
+            let progress = mediaData.initialProgress || 0;
+            if (mediaInterval) clearInterval(mediaInterval);
+            mediaInterval = setInterval(() => {
+                progress = (progress + 0.4) % 100;
+                DOM.mediaProgress.style.width = `${progress}%`;
             }, 1000);
         }
 
-        // Initialization
-        updateTime();
-        setInterval(updateTime, 1000); // Keep time ticking every second
-        fetchWeather(); // Fetch weather on load (which happens every 30s due to meta tag)
-        initMediaProgress();
+        /**
+         * Initialization Lifecycle
+         */
+        function initDashboard() {
+            // Clock tick every second
+            updateClock();
+            setInterval(updateClock, 1000);
+
+            // Fetch weather immediately, then every 10 minutes without page reloads
+            fetchWeather();
+            setInterval(fetchWeather, CONFIG.WEATHER_INTERVAL_MS);
+
+            // Initialize media state (can be wired to Spotify Web API, Home Assistant, or WebSockets)
+            setMediaState({
+                isPlaying: true,
+                title: 'Midnight City',
+                artist: 'M83',
+                artworkUrl: 'https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?q=80&w=300&auto=format&fit=crop',
+                initialProgress: 58
+            });
+        }
+
+        window.addEventListener('DOMContentLoaded', initDashboard);
     </script>
 </body>
 </html>
