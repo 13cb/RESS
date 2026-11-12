@@ -7,6 +7,8 @@
     
     <!-- Tailwind CSS for rapid styling -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Tone.js for gentle synthesized timer chimes without external audio files -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
     
     <style>
         /* 1. CSS Imports placed at the very top of style block */
@@ -34,32 +36,19 @@
             will-change: opacity;
         }
 
-        /* Equalizer bar wave animation */
-        @keyframes soundBars {
-            0%, 100% { height: 4px; }
-            50% { height: 18px; }
+        /* Smooth Pixel-Shift & Night Dimming transitions */
+        #dashboard-root {
+            transition: filter 1.5s ease-in-out;
         }
-        .bar-1 { animation: soundBars 1.1s ease-in-out infinite; }
-        .bar-2 { animation: soundBars 0.8s ease-in-out infinite 0.2s; }
-        .bar-3 { animation: soundBars 1.3s ease-in-out infinite 0.4s; }
-        .bar-4 { animation: soundBars 0.9s ease-in-out infinite 0.1s; }
-
-        /* Subtle pulse for live status dot */
-        @keyframes pulseDot {
-            0%, 100% { opacity: 1; transform: scale(1); }
-            50% { opacity: 0.4; transform: scale(0.9); }
-        }
-        .dot-pulse {
-            animation: pulseDot 2s ease-in-out infinite;
+        #main-content {
+            transition: transform 2s ease-in-out;
+            will-change: transform;
         }
 
         /* 3. Reduced Motion accessibility overrides */
         @media (prefers-reduced-motion: reduce) {
-            .bg-layer {
+            .bg-layer, #dashboard-root, #main-content {
                 transition: none !important;
-            }
-            .bar-1, .bar-2, .bar-3, .bar-4, .dot-pulse {
-                animation: none !important;
             }
             * {
                 transition-duration: 0.01ms !important;
@@ -69,97 +58,127 @@
 </head>
 <body class="h-screen w-screen overflow-hidden text-white bg-black select-none">
 
-    <!-- Preloaded dual-layer cross-fading background -->
-    <div id="bg-container" class="absolute inset-0 z-0 overflow-hidden bg-gradient-to-br from-slate-900 via-gray-900 to-black">
-        <img id="bg-layer-1" class="bg-layer opacity-100 scale-105" alt="Dynamic weather wallpaper 1" src="https://images.unsplash.com/photo-1506744626753-1fa44df31c28?q=80&w=1920&auto=format&fit=crop" />
-        <img id="bg-layer-2" class="bg-layer opacity-0 scale-105" alt="Dynamic weather wallpaper 2" src="" />
-    </div>
+    <!-- Root wrapper for Auto Night Mode brightness & warmth filter -->
+    <div id="dashboard-root" class="relative h-full w-full overflow-hidden">
 
-    <!-- Gradient overlay ensuring maximum readability in any lighting condition -->
-    <div class="absolute inset-0 bg-gradient-to-b from-black/55 via-black/25 to-black/80 z-10 pointer-events-none"></div>
+        <!-- Preloaded dual-layer cross-fading background -->
+        <div id="bg-container" class="absolute inset-0 z-0 overflow-hidden bg-gradient-to-br from-slate-900 via-gray-900 to-black">
+            <img id="bg-layer-1" class="bg-layer opacity-100 scale-105" alt="Dynamic weather wallpaper 1" src="https://images.unsplash.com/photo-1506744626753-1fa44df31c28?q=80&w=1920&auto=format&fit=crop" />
+            <img id="bg-layer-2" class="bg-layer opacity-0 scale-105" alt="Dynamic weather wallpaper 2" src="" />
+        </div>
 
-    <!-- Main Content Container -->
-    <main class="relative z-20 flex flex-col justify-between h-full p-[clamp(1rem,3.5vw,3rem)]">
-        
-        <!-- TOP ROW: Media Status Widget & Current Weather -->
-        <header class="flex flex-row justify-between items-start w-full gap-4">
+        <!-- Gradient overlay ensuring maximum readability in any lighting condition -->
+        <div class="absolute inset-0 bg-gradient-to-b from-black/55 via-black/25 to-black/80 z-10 pointer-events-none"></div>
+
+        <!-- Main Content Container (receives subtle pixel-shift offsets) -->
+        <main id="main-content" class="relative z-20 flex flex-col justify-between h-full p-[clamp(1rem,3.5vw,3rem)]">
             
-            <!-- Accessible "Now Playing" Media Widget -->
-            <section id="media-widget" 
-                     class="flex items-center gap-3 bg-black/45 backdrop-blur-md border border-white/10 rounded-2xl p-2.5 sm:p-3 shadow-2xl max-w-[280px] sm:max-w-xs transition-all"
-                     aria-label="Now Playing Media Player" 
-                     aria-live="polite">
-                <div class="relative flex-shrink-0 w-12 h-12 sm:w-14 sm:h-14 rounded-xl overflow-hidden shadow-md bg-white/10">
-                    <img id="media-art" 
-                         src="https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?q=80&w=300&auto=format&fit=crop" 
-                         alt="Album artwork" 
-                         class="w-full h-full object-cover transition-opacity duration-300" />
-                    <div id="media-art-fallback" class="hidden absolute inset-0 flex items-center justify-center text-xl text-gray-400 bg-gray-800" aria-hidden="true">🎵</div>
-                </div>
-                <div class="flex-1 min-w-0 pr-1">
-                    <div class="flex items-center justify-between gap-1">
-                        <span id="media-status-badge" class="text-[10px] uppercase tracking-wider font-semibold text-emerald-400 flex items-center gap-1.5">
-                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 dot-pulse" aria-hidden="true"></span>
-                            <span>Now Playing</span>
-                        </span>
-                        <!-- Equalizer Animation Bars -->
-                        <div id="media-eq" class="flex items-end gap-0.5 h-4" aria-hidden="true">
-                            <div class="w-0.5 bg-emerald-400 rounded-full bar-1"></div>
-                            <div class="w-0.5 bg-emerald-400 rounded-full bar-2"></div>
-                            <div class="w-0.5 bg-emerald-400 rounded-full bar-3"></div>
-                            <div class="w-0.5 bg-emerald-400 rounded-full bar-4"></div>
+            <!-- TOP ROW: Active Timer Pill & Current Weather -->
+            <header class="flex flex-row justify-between items-start w-full gap-4">
+                
+                <!-- Left Top Stack: Active Kitchen Timer Pill -->
+                <div class="flex flex-col gap-2.5 items-start">
+                    <!-- Active Timer Banner (Appears when a timer is running or ringing) -->
+                    <div id="active-timer-pill" 
+                         class="hidden flex items-center gap-3 bg-amber-500/20 border border-amber-400/40 backdrop-blur-md rounded-2xl px-3.5 py-2 shadow-xl"
+                         aria-live="assertive">
+                        <span class="text-lg" aria-hidden="true">⏲️</span>
+                        <div>
+                            <div id="timer-label" class="text-[10px] uppercase tracking-wider text-amber-300 font-semibold">Timer</div>
+                            <div id="timer-countdown" class="text-lg sm:text-xl font-black tracking-tight tabular-nums leading-none">00:00</div>
                         </div>
+                        <button id="timer-cancel-btn" 
+                                type="button"
+                                class="ml-1 px-2.5 py-1.5 rounded-xl bg-white/15 hover:bg-white/25 active:scale-95 text-xs font-semibold transition"
+                                aria-label="Stop or cancel timer">
+                            Stop
+                        </button>
                     </div>
-                    <div id="media-title" class="text-xs sm:text-sm font-semibold truncate text-white mt-0.5">Midnight City</div>
-                    <div id="media-artist" class="text-[11px] sm:text-xs text-gray-300 truncate">M83</div>
-                    <!-- Audio Progress Bar -->
-                    <div id="media-progress-bar-container" class="w-full bg-white/20 h-1 rounded-full mt-1.5 overflow-hidden">
-                        <div id="media-progress" class="bg-white/80 h-full rounded-full transition-all duration-1000" style="width: 58%;"></div>
+                </div>
+
+                <!-- Current Weather & Environmental Widget -->
+                <section id="current-weather" 
+                         class="text-right text-shadow-heavy flex-shrink-0"
+                         aria-label="Current Weather Information" 
+                         aria-live="polite">
+                    <div class="flex items-center justify-end gap-2 md:gap-3 flex-wrap">
+                        <span id="weather-icon" class="text-[clamp(2.5rem,5.5vw,4.5rem)] leading-none" aria-hidden="true">⛅</span>
+                        <div id="weather-temp" class="text-[clamp(3rem,7vw,6rem)] font-bold tracking-tighter leading-none">--°</div>
                     </div>
-                </div>
-            </section>
+                    <div id="weather-desc" class="text-[clamp(1rem,3vw,2rem)] font-medium mt-1">Loading weather...</div>
+                    
+                    <!-- Actionable Weather Metrics (Feels Like, Rain %, UV, AQI, Sun Countdown) -->
+                    <div id="weather-metrics" class="night-hide flex flex-wrap items-center justify-end gap-1.5 mt-1.5 text-[11px] sm:text-xs font-medium text-gray-100">
+                        <span id="metric-feels" class="bg-black/40 backdrop-blur-sm border border-white/10 rounded-full px-2.5 py-0.5">Feels --°</span>
+                        <span id="metric-rain" class="bg-black/40 backdrop-blur-sm border border-white/10 rounded-full px-2.5 py-0.5">💧 --%</span>
+                        <span id="metric-uv" class="bg-black/40 backdrop-blur-sm border border-white/10 rounded-full px-2.5 py-0.5">☀️ UV --</span>
+                        <span id="metric-aqi" class="bg-black/40 backdrop-blur-sm border border-white/10 rounded-full px-2.5 py-0.5">🍃 AQI --</span>
+                        <span id="metric-sun" class="bg-black/40 backdrop-blur-sm border border-white/10 rounded-full px-2.5 py-0.5">🌅 --</span>
+                    </div>
 
-            <!-- Current Weather Widget -->
-            <section id="current-weather" 
-                     class="text-right text-shadow-heavy flex-shrink-0"
-                     aria-label="Current Weather Information" 
-                     aria-live="polite">
-                <div class="flex items-center justify-end gap-2 md:gap-3 flex-wrap">
-                    <span id="weather-icon" class="text-[clamp(2.5rem,5.5vw,4.5rem)] leading-none" aria-hidden="true">⛅</span>
-                    <div id="weather-temp" class="text-[clamp(3rem,7vw,6rem)] font-bold tracking-tighter leading-none">--°</div>
-                </div>
-                <div id="weather-desc" class="text-[clamp(1rem,3vw,2rem)] font-medium mt-1">Loading weather...</div>
-                <div class="flex items-center justify-end gap-1.5 text-[clamp(0.75rem,2vw,1.1rem)] text-gray-200 opacity-80 font-light tracking-wide uppercase">
-                    <span id="offline-indicator" class="hidden text-amber-400 font-bold" title="Cached data">(Cached)</span>
-                    <span id="weather-location">Teaneck, NJ</span>
-                </div>
-            </section>
-        </header>
+                    <div class="flex items-center justify-end gap-1.5 mt-1.5 text-[clamp(0.75rem,2vw,1.1rem)] text-gray-200 opacity-80 font-light tracking-wide uppercase">
+                        <span id="offline-indicator" class="hidden text-amber-400 font-bold" title="Cached data">(Cached)</span>
+                        <span id="weather-location">Teaneck, NJ</span>
+                    </div>
+                </section>
+            </header>
 
-        <!-- BOTTOM ROW: Clock & 3-Day Forecast -->
-        <footer class="flex flex-wrap justify-between items-end gap-6 md:gap-8 mt-auto text-shadow-heavy w-full">
+            <!-- BOTTOM ROW: Clock & Countdown Pill -->
+            <footer class="flex flex-wrap justify-between items-end gap-6 md:gap-8 mt-auto text-shadow-heavy w-full">
+                
+                <!-- Clock, Countdown Badge, and Date Section -->
+                <section id="clock-section" 
+                         class="flex-shrink-0" 
+                         aria-label="Current Time and Date" 
+                         aria-live="polite">
+                    <!-- Holiday / Event Countdown Pill -->
+                    <div id="event-countdown-badge" 
+                         class="night-hide hidden inline-flex items-center gap-1.5 bg-white/15 backdrop-blur-md border border-white/15 rounded-full px-3 py-1 mb-2 text-xs sm:text-sm font-semibold text-amber-200 shadow-lg">
+                        <span id="event-icon" aria-hidden="true">🎉</span>
+                        <span id="event-text">Countdown</span>
+                    </div>
+
+                    <div class="flex items-baseline gap-2 md:gap-4">
+                        <time id="time" class="text-[clamp(4.5rem,18vw,12rem)] font-black leading-none tracking-tight">--:--</time>
+                        <span id="ampm" class="text-[clamp(1.5rem,6vw,3rem)] font-bold mb-2 md:mb-4 opacity-90"></span>
+                    </div>
+                    <div id="date" class="text-[clamp(1.25rem,4vw,2.5rem)] font-medium mt-2 text-gray-100 pl-1 md:pl-2 opacity-90">---</div>
+                </section>
+            </footer>
+
+        </main>
+
+        <!-- TAP-TO-TOGGLE FLOATING TOUCH CONTROL BAR -->
+        <aside id="touch-control-bar" 
+               class="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 flex flex-wrap items-center justify-center gap-2 bg-slate-900/90 backdrop-blur-xl border border-white/20 rounded-2xl p-2.5 shadow-2xl transition-all duration-300 opacity-0 pointer-events-none translate-y-4 max-w-[95vw]"
+               aria-label="Quick Touch Controls">
             
-            <!-- Clock and Date Section -->
-            <section id="clock-section" 
-                     class="flex-shrink-0" 
-                     aria-label="Current Time and Date" 
-                     aria-live="polite">
-                <div class="flex items-baseline gap-2 md:gap-4">
-                    <time id="time" class="text-[clamp(4.5rem,18vw,12rem)] font-black leading-none tracking-tight">--:--</time>
-                    <span id="ampm" class="text-[clamp(1.5rem,6vw,3rem)] font-bold mb-2 md:mb-4 opacity-90"></span>
-                </div>
-                <div id="date" class="text-[clamp(1.25rem,4vw,2.5rem)] font-medium mt-2 text-gray-100 pl-1 md:pl-2 opacity-90">---</div>
-            </section>
+            <!-- Quick Kitchen Timers -->
+            <div id="timer-presets-group" class="flex items-center gap-1.5 pr-2 border-r border-white/15">
+                <span class="text-xs text-gray-300 font-medium px-1" aria-hidden="true">⏲️</span>
+            </div>
 
-            <!-- 3-Day Daily Forecast Section -->
-            <nav id="forecast-section" aria-label="3-day weather forecast">
-                <div id="forecast-container" class="flex flex-wrap justify-end gap-2 md:gap-4 pb-1 md:pb-2">
-                    <!-- Forecast items injected via JS -->
-                </div>
-            </nav>
-        </footer>
+            <!-- Action Controls -->
+            <div class="flex items-center gap-1.5">
+                <button id="btn-switch-location" type="button" class="px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 text-xs font-semibold transition">
+                    📍 Switch City
+                </button>
+                <button id="btn-toggle-24h" type="button" class="px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 text-xs font-semibold transition">
+                    🕒 12h/24h
+                </button>
+                <button id="btn-cycle-bg" type="button" class="px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 text-xs font-semibold transition">
+                    🖼️ Wallpaper
+                </button>
+                <button id="btn-toggle-night" type="button" class="px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 text-xs font-semibold transition">
+                    🌙 Night Mode
+                </button>
+                <button id="btn-refresh-weather" type="button" class="px-3 py-2 rounded-xl bg-emerald-500/25 hover:bg-emerald-500/40 border border-emerald-400/30 active:scale-95 text-xs font-semibold text-emerald-200 transition">
+                    🔄 Refresh
+                </button>
+            </div>
+        </aside>
 
-    </main>
+    </div>
 
     <script>
         /**
@@ -168,308 +187,500 @@
          * =====================================================================
          */
         const CONFIG = {
-            // Location & Weather Settings
-            LOCATION_NAME: 'Teaneck, NJ',
-            LAT: 40.8976,
-            LON: -74.0154,
+            // 1. Saved Locations (Switchable via the tap-to-toggle control bar)
+            DEFAULT_LOCATION_INDEX: 0,
+            LOCATIONS: [
+                {
+                    NAME: 'Teaneck, NJ',
+                    LAT: 40.8976,
+                    LON: -74.0154,
+                    TIMEZONE: 'America/New_York'
+                },
+                {
+                    NAME: 'New York, NY',
+                    LAT: 40.7128,
+                    LON: -74.0060,
+                    TIMEZONE: 'America/New_York'
+                }
+            ],
+
+            // 2. Weather & Environmental Settings
             TEMP_UNIT: 'fahrenheit',          // 'fahrenheit' or 'celsius'
-            FORECAST_DAYS: 3,                 // Number of upcoming forecast days to display (1–6)
+            SHOW_FEELS_LIKE: true,
+            SHOW_RAIN_CHANCE: true,
+            SHOW_UV_INDEX: true,
+            SHOW_AQI: true,
+            SHOW_SUN_COUNTDOWN: true,
 
-            // Time & Locale Settings
+            // 3. Time & Locale Settings
             LOCALE: 'en-US',
-            TIMEZONE: 'America/New_York',
-            USE_24_HOUR: false,               // true for 24-hour format (17:30), false for 12-hour (5:30 PM)
+            USE_24_HOUR: false,
 
-            // Refresh & Network Resilience Settings
+            // 4. Auto Night Mode / Dimming Schedule
+            NIGHT_MODE: {
+                ENABLED: true,
+                START_HOUR: 22,               // 10:00 PM
+                END_HOUR: 6,                  // 6:00 AM
+                BRIGHTNESS: 0.35,             // 0.1 to 1.0
+                SEPIA_WARMTH: 0.25,           // Warm tint (0 to 1) to reduce blue light
+                HIDE_EXTRA_WIDGETS: true      // Hides pills/badges during night mode
+            },
+
+            // 5. OLED / LCD Burn-In Protection (Pixel Shift) & Wake Lock
+            PIXEL_SHIFT: {
+                ENABLED: true,
+                INTERVAL_MS: 15 * 60 * 1000,  // Shift every 15 minutes
+                MAX_OFFSET_PX: 4              // Subtle 1-4px drift
+            },
+            KEEP_SCREEN_AWAKE: true,          // Uses Screen Wake Lock API if supported
+
+            // 6. Interactive Kitchen Timers & Holiday Countdowns
+            TIMERS: {
+                PRESETS_MINUTES: [5, 10, 15, 30]
+            },
+            EVENTS: [
+                { LABEL: 'Thanksgiving', MONTH: 11, DAY: 26, ICON: '🦃' },
+                { LABEL: 'Christmas', MONTH: 12, DAY: 25, ICON: '🎄' },
+                { LABEL: 'New Year', MONTH: 1, DAY: 1, ICON: '🎆' }
+            ],
+
+            // 7. Refresh & Network Resilience Settings
             CLOCK_INTERVAL_MS: 1000,          // Clock update frequency (1 second)
             WEATHER_INTERVAL_MS: 10 * 60 * 1000, // Weather API refresh interval (10 minutes)
             FETCH_TIMEOUT_MS: 8000,           // AbortController timeout (8 seconds)
-            STORAGE_KEY: 'echo_dashboard_weather_cache',
+            STORAGE_KEY: 'echo_dashboard_weather_cache_v3',
 
-            // Default Media Player Widget Settings
-            MEDIA: {
-                ENABLED: true,                // Set false to hide the media widget entirely
-                IS_PLAYING: true,
-                TITLE: 'Midnight City',
-                ARTIST: 'M83',
-                ARTWORK_URL: 'https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?q=80&w=300&auto=format&fit=crop',
-                DURATION_SECONDS: 243,        // Total track length in seconds (4m 03s)
-                INITIAL_PROGRESS_PERCENT: 58  // Starting progress bar percentage
-            },
-
-            // Dynamic Weather & Time-of-Day Background Wallpapers
+            // 8. Dynamic Weather & Time-of-Day Background Wallpapers
             BACKGROUNDS: {
                 DEFAULT: 'https://images.unsplash.com/photo-1506744626753-1fa44df31c28?q=80&w=1920&auto=format&fit=crop',
-                THUNDER: 'https://images.unsplash.com/photo-1605721911519-3dfeb3be25e7?q=80&w=1920&auto=format&fit=crop',
-                RAIN: 'https://images.unsplash.com/photo-1534274988757-a28bf1a57c17?q=80&w=1920&auto=format&fit=crop',
+                THUNDERSTORM: 'https://images.unsplash.com/photo-1605727216801-e27ce1d0cc28?q=80&w=1920&auto=format&fit=crop',
                 SNOW: 'https://images.unsplash.com/photo-1491002052546-bf38f186af56?q=80&w=1920&auto=format&fit=crop',
-                FOG: 'https://images.unsplash.com/photo-1487621167305-5d248087c724?q=80&w=1920&auto=format&fit=crop',
-                CLEAR_DAY: 'https://images.unsplash.com/photo-1506744626753-1fa44df31c28?q=80&w=1920&auto=format&fit=crop',
-                CLEAR_NIGHT: 'https://images.unsplash.com/photo-1509773896068-7fd415d91e2e?q=80&w=1920&auto=format&fit=crop',
-                CLOUDY_DAY: 'https://images.unsplash.com/photo-1534088568595-a066f410bcda?q=80&w=1920&auto=format&fit=crop',
-                CLOUDY_NIGHT: 'https://images.unsplash.com/photo-1532978379173-523e16f371f2?q=80&w=1920&auto=format&fit=crop'
+                RAIN: 'https://images.unsplash.com/photo-1515694346937-94d85e41e6f0?q=80&w=1920&auto=format&fit=crop',
+                FOG: 'https://images.unsplash.com/photo-1485236715568-ddc5ee6ca227?q=80&w=1920&auto=format&fit=crop',
+                NIGHT_CLEAR: 'https://images.unsplash.com/photo-1509773896068-7fd415d91e2e?q=80&w=1920&auto=format&fit=crop',
+                NIGHT_CLOUDY: 'https://images.unsplash.com/photo-1534447677768-be436bb09401?q=80&w=1920&auto=format&fit=crop',
+                DAY_CLOUDY: 'https://images.unsplash.com/photo-1534088568595-a066f410bcda?q=80&w=1920&auto=format&fit=crop',
+                DAY_SUNNY: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?q=80&w=1920&auto=format&fit=crop'
             }
         };
 
         /**
-         * Cache DOM references once to boost performance on lower-power devices
+         * =====================================================================
+         * RUNTIME STATE & CACHED DOM REFERENCES
+         * =====================================================================
          */
+        const STATE = {
+            locationIndex: CONFIG.DEFAULT_LOCATION_INDEX,
+            use24Hour: CONFIG.USE_24_HOUR,
+            manualNightOverride: null,        // null = auto schedule, true/false = manual override
+            manualBgIndex: -1,                // -1 = weather-driven, >=0 = manual wallpaper index
+            activeBgLayer: 1,
+            currentBgUrl: CONFIG.BACKGROUNDS.DEFAULT,
+            dailySunData: null,               // { sunrise: Date, sunset: Date }
+            timerInterval: null,
+            timerEndTime: null,
+            timerTotalLabel: '',
+            timerRinging: false,
+            controlBarTimeout: null
+        };
+
         const DOM = {
+            root: document.getElementById('dashboard-root'),
+            mainContent: document.getElementById('main-content'),
             time: document.getElementById('time'),
             ampm: document.getElementById('ampm'),
             date: document.getElementById('date'),
+            weatherIcon: document.getElementById('weather-icon'),
             weatherTemp: document.getElementById('weather-temp'),
             weatherDesc: document.getElementById('weather-desc'),
-            weatherIcon: document.getElementById('weather-icon'),
             weatherLocation: document.getElementById('weather-location'),
             offlineIndicator: document.getElementById('offline-indicator'),
-            forecastSection: document.getElementById('forecast-section'),
-            forecastContainer: document.getElementById('forecast-container'),
+            metricFeels: document.getElementById('metric-feels'),
+            metricRain: document.getElementById('metric-rain'),
+            metricUv: document.getElementById('metric-uv'),
+            metricAqi: document.getElementById('metric-aqi'),
+            metricSun: document.getElementById('metric-sun'),
+            eventBadge: document.getElementById('event-countdown-badge'),
+            eventIcon: document.getElementById('event-icon'),
+            eventText: document.getElementById('event-text'),
             bgLayer1: document.getElementById('bg-layer-1'),
             bgLayer2: document.getElementById('bg-layer-2'),
-            mediaWidget: document.getElementById('media-widget'),
-            mediaArt: document.getElementById('media-art'),
-            mediaArtFallback: document.getElementById('media-art-fallback'),
-            mediaTitle: document.getElementById('media-title'),
-            mediaArtist: document.getElementById('media-artist'),
-            mediaStatusBadge: document.getElementById('media-status-badge'),
-            mediaEq: document.getElementById('media-eq'),
-            mediaProgress: document.getElementById('media-progress'),
-            mediaProgressContainer: document.getElementById('media-progress-bar-container')
+            controlBar: document.getElementById('touch-control-bar'),
+            timerPresetsGroup: document.getElementById('timer-presets-group'),
+            activeTimerPill: document.getElementById('active-timer-pill'),
+            timerLabel: document.getElementById('timer-label'),
+            timerCountdown: document.getElementById('timer-countdown'),
+            timerCancelBtn: document.getElementById('timer-cancel-btn'),
+            btnSwitchLocation: document.getElementById('btn-switch-location'),
+            btnToggle24h: document.getElementById('btn-toggle-24h'),
+            btnCycleBg: document.getElementById('btn-cycle-bg'),
+            btnToggleNight: document.getElementById('btn-toggle-night'),
+            btnRefreshWeather: document.getElementById('btn-refresh-weather')
         };
 
-        // Track active background layer for cross-fades
-        let activeBgLayer = 1;
-        let currentBgUrl = CONFIG.BACKGROUNDS.DEFAULT;
+        const WMO_WEATHER_MAP = {
+            0:  { text: 'Clear sky', icon: '☀️' },
+            1:  { text: 'Mainly clear', icon: '🌤️' },
+            2:  { text: 'Partly cloudy', icon: '⛅' },
+            3:  { text: 'Overcast', icon: '☁️' },
+            45: { text: 'Fog', icon: '🌫️' },
+            48: { text: 'Rime fog', icon: '🌫️' },
+            51: { text: 'Light drizzle', icon: '🌧️' },
+            53: { text: 'Moderate drizzle', icon: '🌧️' },
+            55: { text: 'Dense drizzle', icon: '🌧️' },
+            61: { text: 'Slight rain', icon: '🌧️' },
+            63: { text: 'Moderate rain', icon: '🌧️' },
+            65: { text: 'Heavy rain', icon: '🌧️' },
+            71: { text: 'Slight snow', icon: '❄️' },
+            73: { text: 'Moderate snow', icon: '❄️' },
+            75: { text: 'Heavy snow', icon: '❄️' },
+            77: { text: 'Snow grains', icon: '❄️' },
+            80: { text: 'Slight showers', icon: '🌦️' },
+            81: { text: 'Moderate showers', icon: '🌦️' },
+            82: { text: 'Violent showers', icon: '⛈️' },
+            95: { text: 'Thunderstorm', icon: '⛈️' },
+            96: { text: 'Thunderstorm & hail', icon: '⛈️' },
+            99: { text: 'Heavy thunderstorm', icon: '⛈️' }
+        };
 
-        /**
-         * Intl formatters driven by CONFIG locale, timezone, and 12/24-hour preference
-         */
-        const timeFormatter = new Intl.DateTimeFormat(CONFIG.LOCALE, {
-            hour: CONFIG.USE_24_HOUR ? '2-digit' : 'numeric',
-            minute: '2-digit',
-            hour12: !CONFIG.USE_24_HOUR,
-            timeZone: CONFIG.TIMEZONE
-        });
+        let dateFormatter = null;
+        let hourFormatter = null;
 
-        const dateFormatter = new Intl.DateTimeFormat(CONFIG.LOCALE, {
-            weekday: 'long',
-            month: 'long',
-            day: 'numeric',
-            timeZone: CONFIG.TIMEZONE
-        });
+        function getActiveLocation() {
+            return CONFIG.LOCATIONS[STATE.locationIndex] || CONFIG.LOCATIONS[0];
+        }
 
-        const weekdayFormatter = new Intl.DateTimeFormat(CONFIG.LOCALE, {
-            weekday: 'short',
-            timeZone: CONFIG.TIMEZONE
-        });
-
-        /**
-         * Maps WMO weather code to descriptive text and emojis
-         */
-        function getWeatherDescription(code) {
-            const map = {
-                0:  { text: 'Clear Sky', icon: '☀️' },
-                1:  { text: 'Mainly Clear', icon: '🌤️' },
-                2:  { text: 'Partly Cloudy', icon: '⛅' },
-                3:  { text: 'Overcast', icon: '☁️' },
-                45: { text: 'Fog', icon: '🌫️' },
-                48: { text: 'Rime Fog', icon: '🌫️' },
-                51: { text: 'Light Drizzle', icon: '🌧️' },
-                53: { text: 'Moderate Drizzle', icon: '🌧️' },
-                55: { text: 'Dense Drizzle', icon: '🌧️' },
-                61: { text: 'Slight Rain', icon: '🌧️' },
-                63: { text: 'Moderate Rain', icon: '🌧️' },
-                65: { text: 'Heavy Rain', icon: '🌧️' },
-                71: { text: 'Slight Snow', icon: '❄️' },
-                73: { text: 'Moderate Snow', icon: '❄️' },
-                75: { text: 'Heavy Snow', icon: '❄️' },
-                77: { text: 'Snow Grains', icon: '❄️' },
-                80: { text: 'Slight Showers', icon: '🌦️' },
-                81: { text: 'Moderate Showers', icon: '🌦️' },
-                82: { text: 'Violent Showers', icon: '⛈️' },
-                95: { text: 'Thunderstorm', icon: '⛈️' },
-                96: { text: 'Thunderstorm & Hail', icon: '⛈️' },
-                99: { text: 'Severe Thunderstorm', icon: '⛈️' }
-            };
-            return map[code] || { text: 'Unknown Conditions', icon: '🌡️' };
+        function rebuildFormatters() {
+            const loc = getActiveLocation();
+            dateFormatter = new Intl.DateTimeFormat(CONFIG.LOCALE, {
+                weekday: 'long',
+                month: 'long',
+                day: 'numeric',
+                timeZone: loc.TIMEZONE
+            });
+            hourFormatter = new Intl.DateTimeFormat('en-US', {
+                hour: 'numeric',
+                minute: 'numeric',
+                hour12: false,
+                timeZone: loc.TIMEZONE
+            });
         }
 
         /**
-         * 1. Smart Clock Loop - runs every second without full-page reloads
+         * =====================================================================
+         * CLOCK, NIGHT MODE, EVENT COUNTDOWN & SUNRISE/SUNSET LOGIC
+         * =====================================================================
          */
         function updateClock() {
             const now = new Date();
-            const timeParts = timeFormatter.formatToParts(now);
-            
-            const hour = timeParts.find(p => p.type === 'hour')?.value || '';
-            const minute = timeParts.find(p => p.type === 'minute')?.value || '';
-            const dayPeriod = timeParts.find(p => p.type === 'dayPeriod')?.value || '';
+            const loc = getActiveLocation();
 
-            DOM.time.textContent = `${hour}:${minute}`;
-            DOM.ampm.textContent = CONFIG.USE_24_HOUR ? '' : dayPeriod;
-            DOM.ampm.classList.toggle('hidden', CONFIG.USE_24_HOUR);
+            // Extract local hour & minute in configured timezone
+            const parts = hourFormatter.formatToParts(now);
+            const hour24 = parseInt(parts.find(p => p.type === 'hour')?.value || '0', 10) % 24;
+            const minuteStr = (parts.find(p => p.type === 'minute')?.value || '00').padStart(2, '0');
+
+            if (STATE.use24Hour) {
+                DOM.time.textContent = `${hour24.toString().padStart(2, '0')}:${minuteStr}`;
+                DOM.ampm.textContent = '';
+            } else {
+                const ampm = hour24 >= 12 ? 'PM' : 'AM';
+                const hour12 = (hour24 % 12) || 12;
+                DOM.time.textContent = `${hour12}:${minuteStr}`;
+                DOM.ampm.textContent = ampm;
+            }
+
             DOM.date.textContent = dateFormatter.format(now);
+
+            applyNightMode(hour24);
+            updateEventCountdown(now, loc.TIMEZONE);
+            updateSunCountdown(now);
+        }
+
+        function applyNightMode(currentHour24) {
+            let isNight = false;
+
+            if (STATE.manualNightOverride !== null) {
+                isNight = STATE.manualNightOverride;
+            } else if (CONFIG.NIGHT_MODE.ENABLED) {
+                const start = CONFIG.NIGHT_MODE.START_HOUR;
+                const end = CONFIG.NIGHT_MODE.END_HOUR;
+                isNight = start > end
+                    ? (currentHour24 >= start || currentHour24 < end)
+                    : (currentHour24 >= start && currentHour24 < end);
+            }
+
+            if (isNight) {
+                DOM.root.style.filter = `brightness(${CONFIG.NIGHT_MODE.BRIGHTNESS}) sepia(${CONFIG.NIGHT_MODE.SEPIA_WARMTH})`;
+                if (CONFIG.NIGHT_MODE.HIDE_EXTRA_WIDGETS) {
+                    document.querySelectorAll('.night-hide').forEach(el => el.classList.add('opacity-0', 'pointer-events-none'));
+                }
+            } else {
+                DOM.root.style.filter = 'brightness(1) sepia(0)';
+                document.querySelectorAll('.night-hide').forEach(el => el.classList.remove('opacity-0', 'pointer-events-none'));
+            }
+        }
+
+        function updateEventCountdown(now, timeZone) {
+            if (!CONFIG.EVENTS || CONFIG.EVENTS.length === 0) {
+                DOM.eventBadge.classList.add('hidden');
+                return;
+            }
+
+            // Determine today's YYYY-MM-DD in target timezone
+            const localDateStr = new Intl.DateTimeFormat('en-CA', { timeZone }).format(now);
+            const [y, m, d] = localDateStr.split('-').map(Number);
+            const todayMidnight = Date.UTC(y, m - 1, d);
+
+            let nearestEvent = null;
+            let minDays = Infinity;
+
+            for (const ev of CONFIG.EVENTS) {
+                let targetYear = y;
+                let targetMidnight = Date.UTC(targetYear, ev.MONTH - 1, ev.DAY);
+                if (targetMidnight < todayMidnight) {
+                    targetYear += 1;
+                    targetMidnight = Date.UTC(targetYear, ev.MONTH - 1, ev.DAY);
+                }
+                const diffDays = Math.round((targetMidnight - todayMidnight) / (1000 * 60 * 60 * 24));
+                if (diffDays < minDays) {
+                    minDays = diffDays;
+                    nearestEvent = ev;
+                }
+            }
+
+            if (nearestEvent && minDays <= 45) {
+                DOM.eventIcon.textContent = nearestEvent.ICON || '🎉';
+                if (minDays === 0) {
+                    DOM.eventText.textContent = `Today is ${nearestEvent.LABEL}!`;
+                } else if (minDays === 1) {
+                    DOM.eventText.textContent = `${nearestEvent.LABEL} is Tomorrow`;
+                } else {
+                    DOM.eventText.textContent = `${minDays} days until ${nearestEvent.LABEL}`;
+                }
+                DOM.eventBadge.classList.remove('hidden');
+            } else {
+                DOM.eventBadge.classList.add('hidden');
+            }
+        }
+
+        function updateSunCountdown(now) {
+            if (!CONFIG.SHOW_SUN_COUNTDOWN || !STATE.dailySunData) {
+                DOM.metricSun.classList.add('hidden');
+                return;
+            }
+
+            const { sunrise, sunset } = STATE.dailySunData;
+            let targetTime = null;
+            let label = '';
+
+            if (now < sunrise) {
+                targetTime = sunrise;
+                label = '🌅 Sunrise in';
+            } else if (now < sunset) {
+                targetTime = sunset;
+                label = '🌇 Sunset in';
+            } else {
+                DOM.metricSun.textContent = '🌙 Nighttime';
+                DOM.metricSun.classList.remove('hidden');
+                return;
+            }
+
+            const diffMins = Math.max(1, Math.round((targetTime - now) / 60000));
+            const hrs = Math.floor(diffMins / 60);
+            const mins = diffMins % 60;
+            const timeStr = hrs > 0 ? `${hrs}h ${mins}m` : `${mins}m`;
+
+            DOM.metricSun.textContent = `${label} ${timeStr}`;
+            DOM.metricSun.classList.remove('hidden');
         }
 
         /**
-         * 2. Preloads image before executing smooth opacity cross-fade
+         * =====================================================================
+         * DISPLAY HARDWARE PROTECTION (PIXEL SHIFT & WAKE LOCK)
+         * =====================================================================
          */
-        function preloadAndSwapBackground(newUrl) {
-            if (!newUrl || newUrl === currentBgUrl) return;
+        function startPixelShift() {
+            if (!CONFIG.PIXEL_SHIFT.ENABLED) return;
+            setInterval(() => {
+                const max = CONFIG.PIXEL_SHIFT.MAX_OFFSET_PX;
+                const offsetX = Math.floor(Math.random() * (max * 2 + 1)) - max;
+                const offsetY = Math.floor(Math.random() * (max * 2 + 1)) - max;
+                DOM.mainContent.style.transform = `translate3d(${offsetX}px, ${offsetY}px, 0)`;
+            }, CONFIG.PIXEL_SHIFT.INTERVAL_MS);
+        }
+
+        async function requestWakeLock() {
+            if (!CONFIG.KEEP_SCREEN_AWAKE || !('wakeLock' in navigator)) return;
+            try {
+                await navigator.wakeLock.request('screen');
+            } catch (err) {
+                console.debug('WakeLock skipped or unsupported:', err.message);
+            }
+        }
+
+        /**
+         * =====================================================================
+         * DYNAMIC BACKGROUND PRELOADER & CROSS-FADE LOGIC
+         * =====================================================================
+         */
+        function resolveBackgroundUrl(weatherCode, isDay) {
+            if (STATE.manualBgIndex >= 0) {
+                const urls = Object.values(CONFIG.BACKGROUNDS);
+                return urls[STATE.manualBgIndex % urls.length];
+            }
+
+            const bg = CONFIG.BACKGROUNDS;
+            if ([95, 96, 99].includes(weatherCode)) return bg.THUNDERSTORM;
+            if ([71, 73, 75, 77].includes(weatherCode)) return bg.SNOW;
+            if ([51, 53, 55, 61, 63, 65, 80, 81, 82].includes(weatherCode)) return bg.RAIN;
+            if ([45, 48].includes(weatherCode)) return bg.FOG;
+
+            if (isDay === 0) {
+                return [2, 3].includes(weatherCode) ? bg.NIGHT_CLOUDY : bg.NIGHT_CLEAR;
+            }
+            return [2, 3].includes(weatherCode) ? bg.DAY_CLOUDY : bg.DAY_SUNNY;
+        }
+
+        function updateBackground(weatherCode, isDay) {
+            const targetUrl = resolveBackgroundUrl(weatherCode, isDay);
+            if (targetUrl === STATE.currentBgUrl) return;
 
             const preloader = new Image();
             preloader.onload = () => {
-                const incomingLayer = activeBgLayer === 1 ? DOM.bgLayer2 : DOM.bgLayer1;
-                const outgoingLayer = activeBgLayer === 1 ? DOM.bgLayer1 : DOM.bgLayer2;
+                const incomingLayer = STATE.activeBgLayer === 1 ? DOM.bgLayer2 : DOM.bgLayer1;
+                const outgoingLayer = STATE.activeBgLayer === 1 ? DOM.bgLayer1 : DOM.bgLayer2;
 
-                incomingLayer.src = newUrl;
+                incomingLayer.src = targetUrl;
                 incomingLayer.classList.remove('opacity-0');
                 incomingLayer.classList.add('opacity-100');
 
                 outgoingLayer.classList.remove('opacity-100');
                 outgoingLayer.classList.add('opacity-0');
 
-                activeBgLayer = activeBgLayer === 1 ? 2 : 1;
-                currentBgUrl = newUrl;
+                STATE.activeBgLayer = STATE.activeBgLayer === 1 ? 2 : 1;
+                STATE.currentBgUrl = targetUrl;
             };
-
             preloader.onerror = () => {
-                console.warn('Background image failed to load; keeping existing background.');
+                console.warn('Background image failed to preload, keeping current wallpaper.');
             };
-
-            preloader.src = newUrl;
+            preloader.src = targetUrl;
         }
 
         /**
-         * 3. Selects contextual wallpaper based on condition and daylight
+         * =====================================================================
+         * WEATHER & ENVIRONMENTAL DATA FETCHING AND RENDERING
+         * =====================================================================
          */
-        function updateBackground(code, isDay) {
-            const bg = CONFIG.BACKGROUNDS;
-            let targetUrl = bg.CLEAR_DAY;
-
-            if ([95, 96, 99].includes(code)) {
-                targetUrl = bg.THUNDER;
-            } else if ([51, 53, 55, 61, 63, 65, 80, 81, 82].includes(code)) {
-                targetUrl = bg.RAIN;
-            } else if ([71, 73, 75, 77].includes(code)) {
-                targetUrl = bg.SNOW;
-            } else if ([45, 48].includes(code)) {
-                targetUrl = bg.FOG;
-            } else if ([1, 2, 3].includes(code)) {
-                targetUrl = isDay ? bg.CLOUDY_DAY : bg.CLOUDY_NIGHT;
-            } else {
-                targetUrl = isDay ? bg.CLEAR_DAY : bg.CLEAR_NIGHT;
-            }
-
-            preloadAndSwapBackground(targetUrl);
-        }
-
-        /**
-         * 4. Renders current weather UI
-         */
-        function renderWeather(current, isCached = false) {
+        function renderWeather(current, daily, aqiCurrent, isCached = false) {
             if (!current) {
-                DOM.weatherDesc.textContent = 'Weather Unavailable';
                 DOM.weatherTemp.textContent = '--°';
-                DOM.weatherIcon.textContent = '⚠️';
+                DOM.weatherDesc.textContent = 'Weather Unavailable';
+                DOM.weatherIcon.textContent = '📡';
+                DOM.offlineIndicator.classList.add('hidden');
                 return;
             }
 
             const temp = Math.round(current.temperature_2m);
+            const feelsLike = Math.round(current.apparent_temperature ?? current.temperature_2m);
             const code = current.weather_code;
-            const isDay = current.is_day !== 0;
-            const weatherInfo = getWeatherDescription(code);
+            const isDay = current.is_day;
+            const info = WMO_WEATHER_MAP[code] || { text: 'Clear', icon: '🌡️' };
 
             DOM.weatherTemp.textContent = `${temp}°`;
-            DOM.weatherDesc.textContent = weatherInfo.text;
-            DOM.weatherIcon.textContent = weatherInfo.icon;
+            DOM.weatherDesc.textContent = info.text;
+            DOM.weatherIcon.textContent = info.icon;
             DOM.offlineIndicator.classList.toggle('hidden', !isCached);
+
+            // Feels Like pill
+            if (CONFIG.SHOW_FEELS_LIKE) {
+                DOM.metricFeels.textContent = `Feels ${feelsLike}°`;
+                DOM.metricFeels.classList.remove('hidden');
+            } else {
+                DOM.metricFeels.classList.add('hidden');
+            }
+
+            // Rain Chance & UV Index from Daily[0]
+            if (daily) {
+                const rainChance = daily.precipitation_probability_max?.[0];
+                if (CONFIG.SHOW_RAIN_CHANCE && rainChance !== undefined && rainChance !== null) {
+                    DOM.metricRain.textContent = `💧 ${rainChance}%`;
+                    DOM.metricRain.classList.remove('hidden');
+                } else {
+                    DOM.metricRain.classList.add('hidden');
+                }
+
+                const uvIndex = daily.uv_index_max?.[0];
+                if (CONFIG.SHOW_UV_INDEX && uvIndex !== undefined && uvIndex !== null) {
+                    DOM.metricUv.textContent = `☀️ UV ${Math.round(uvIndex)}`;
+                    DOM.metricUv.classList.remove('hidden');
+                } else {
+                    DOM.metricUv.classList.add('hidden');
+                }
+
+                if (daily.sunrise?.[0] && daily.sunset?.[0]) {
+                    STATE.dailySunData = {
+                        sunrise: new Date(daily.sunrise[0]),
+                        sunset: new Date(daily.sunset[0])
+                    };
+                    updateSunCountdown(new Date());
+                }
+            }
+
+            // Air Quality (US AQI)
+            if (CONFIG.SHOW_AQI && aqiCurrent && aqiCurrent.us_aqi !== undefined) {
+                DOM.metricAqi.textContent = `🍃 AQI ${Math.round(aqiCurrent.us_aqi)}`;
+                DOM.metricAqi.classList.remove('hidden');
+            } else {
+                DOM.metricAqi.classList.add('hidden');
+            }
 
             updateBackground(code, isDay);
         }
 
-        /**
-         * 5. Renders forecast days based on CONFIG.FORECAST_DAYS
-         */
-        function renderForecast(daily) {
-            if (!daily || !Array.isArray(daily.time) || daily.time.length < 2) {
-                DOM.forecastContainer.innerHTML = '<div class="text-sm text-gray-300">Forecast unavailable</div>';
-                return;
-            }
-
-            let forecastHtml = '';
-            const maxDays = Math.min(CONFIG.FORECAST_DAYS + 1, daily.time.length);
-
-            for (let i = 1; i < maxDays; i++) {
-                const dateStr = daily.time[i];
-                if (!dateStr) continue;
-
-                // Create localized date using Intl
-                const dateObj = new Date(`${dateStr}T12:00:00`);
-                const dayName = isNaN(dateObj.getTime()) ? `Day ${i}` : weekdayFormatter.format(dateObj);
-                const maxTemp = Math.round(daily.temperature_2m_max?.[i] ?? 0);
-                const minTemp = Math.round(daily.temperature_2m_min?.[i] ?? 0);
-                const code = daily.weather_code?.[i] ?? 0;
-                const weatherInfo = getWeatherDescription(code);
-
-                forecastHtml += `
-                    <div class="flex flex-col items-center bg-black/40 rounded-xl p-[clamp(0.5rem,2vw,1rem)] backdrop-blur-sm border border-white/10 shadow-lg min-w-[70px] md:min-w-[100px]"
-                         role="group" 
-                         aria-label="${dayName}: ${weatherInfo.text}, High ${maxTemp}°, Low ${minTemp}°">
-                        <div class="text-[clamp(0.875rem,2.5vw,1.5rem)] font-medium text-gray-200 tracking-wide">${dayName}</div>
-                        <div class="text-[clamp(1.5rem,4vw,2.5rem)] my-1 md:my-3" aria-hidden="true">${weatherInfo.icon}</div>
-                        <div class="text-[clamp(0.875rem,3vw,1.25rem)] font-bold whitespace-nowrap">
-                            ${maxTemp}° <span class="text-gray-400 font-normal ml-1">${minTemp}°</span>
-                        </div>
-                    </div>
-                `;
-            }
-
-            DOM.forecastContainer.innerHTML = forecastHtml;
-        }
-
-        /**
-         * 6. Weather fetching with AbortController, timeout, and localStorage caching
-         */
         async function fetchWeather() {
+            const loc = getActiveLocation();
+            DOM.weatherLocation.textContent = loc.NAME;
+
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), CONFIG.FETCH_TIMEOUT_MS);
 
-            // Request today + CONFIG.FORECAST_DAYS upcoming days (clamped to Open-Meteo's 16-day max)
-            const apiForecastDays = Math.min(16, Math.max(2, CONFIG.FORECAST_DAYS + 1));
-            const url = `https://api.open-meteo.com/v1/forecast?latitude=${CONFIG.LAT}&longitude=${CONFIG.LON}&current=temperature_2m,weather_code,is_day&daily=weather_code,temperature_2m_max,temperature_2m_min&temperature_unit=${encodeURIComponent(CONFIG.TEMP_UNIT)}&timezone=${encodeURIComponent(CONFIG.TIMEZONE)}&forecast_days=${apiForecastDays}`;
+            const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${loc.LAT}&longitude=${loc.LON}&current=temperature_2m,apparent_temperature,weather_code,is_day&daily=precipitation_probability_max,uv_index_max,sunrise,sunset&temperature_unit=${encodeURIComponent(CONFIG.TEMP_UNIT)}&timezone=${encodeURIComponent(loc.TIMEZONE)}&forecast_days=1`;
+            const aqiUrl = `https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${loc.LAT}&longitude=${loc.LON}&current=us_aqi&timezone=${encodeURIComponent(loc.TIMEZONE)}`;
+
+            const cacheSignature = `${loc.LAT},${loc.LON},${CONFIG.TEMP_UNIT}`;
 
             try {
-                const response = await fetch(url, { signal: controller.signal });
+                // Fetch Current Weather + Air Quality in parallel
+                const [weatherRes, aqiRes] = await Promise.all([
+                    fetch(weatherUrl, { signal: controller.signal }),
+                    CONFIG.SHOW_AQI ? fetch(aqiUrl, { signal: controller.signal }).catch(() => null) : Promise.resolve(null)
+                ]);
                 clearTimeout(timeoutId);
 
-                if (!response.ok) throw new Error(`HTTP ${response.status}`);
-                const data = await response.json();
+                if (!weatherRes.ok) throw new Error(`HTTP ${weatherRes.status}`);
+                const weatherData = await weatherRes.json();
+                const aqiData = (aqiRes && aqiRes.ok) ? await aqiRes.json() : null;
 
-                if (data && data.current) {
-                    // Store cache alongside config signature so changing units/coords invalidates stale cache
+                if (weatherData && weatherData.current) {
                     localStorage.setItem(CONFIG.STORAGE_KEY, JSON.stringify({
-                        data,
-                        configSignature: `${CONFIG.LAT},${CONFIG.LON},${CONFIG.TEMP_UNIT},${CONFIG.FORECAST_DAYS}`,
+                        weatherData,
+                        aqiData,
+                        configSignature: cacheSignature,
                         timestamp: Date.now()
                     }));
 
-                    renderWeather(data.current, false);
-                    renderForecast(data.daily);
+                    renderWeather(weatherData.current, weatherData.daily, aqiData?.current, false);
                 }
             } catch (error) {
                 console.warn('Weather fetch failed, falling back to cache:', error);
                 
-                // Fallback to cache if it matches current location/unit settings
                 const cachedRaw = localStorage.getItem(CONFIG.STORAGE_KEY);
                 if (cachedRaw) {
                     try {
                         const cached = JSON.parse(cachedRaw);
-                        const currentSignature = `${CONFIG.LAT},${CONFIG.LON},${CONFIG.TEMP_UNIT},${CONFIG.FORECAST_DAYS}`;
-                        if (cached && cached.data && cached.configSignature === currentSignature) {
-                            renderWeather(cached.data.current, true);
-                            renderForecast(cached.data.daily);
+                        if (cached && cached.weatherData && cached.configSignature === cacheSignature) {
+                            renderWeather(cached.weatherData.current, cached.weatherData.daily, cached.aqiData?.current, true);
                             return;
                         }
                     } catch (e) {
@@ -477,78 +688,197 @@
                     }
                 }
 
-                // If cache is empty or invalid
-                renderWeather(null, false);
-                renderForecast(null);
+                renderWeather(null, null, null, false);
             }
         }
 
         /**
-         * 7. Media Widget State & Animations
+         * =====================================================================
+         * INTERACTIVE KITCHEN / FOCUS TIMERS WITH TONE.JS CHIME
+         * =====================================================================
          */
-        let mediaInterval = null;
+        function playGentleChime() {
+            try {
+                if (typeof Tone === 'undefined') return;
+                if (Tone.context.state !== 'running') {
+                    Tone.start();
+                }
+                const synth = new Tone.PolySynth(Tone.Synth, {
+                    oscillator: { type: 'sine' },
+                    envelope: { attack: 0.05, decay: 0.4, sustain: 0.2, release: 1.5 }
+                }).toDestination();
+                synth.volume.value = -8;
+                const now = Tone.now();
+                synth.triggerAttackRelease('C5', '8n', now);
+                synth.triggerAttackRelease('E5', '8n', now + 0.18);
+                synth.triggerAttackRelease('G5', '4n', now + 0.36);
+            } catch (e) {
+                console.debug('Audio chime blocked or unavailable:', e);
+            }
+        }
 
-        function setMediaState(mediaData) {
-            if (!CONFIG.MEDIA.ENABLED) {
-                DOM.mediaWidget.classList.add('hidden');
-                if (mediaInterval) clearInterval(mediaInterval);
+        function startTimer(minutes) {
+            stopTimer();
+            // Unlock audio context on user tap
+            if (typeof Tone !== 'undefined' && Tone.context.state !== 'running') {
+                Tone.start().catch(() => {});
+            }
+
+            STATE.timerTotalLabel = `${minutes}m Timer`;
+            STATE.timerEndTime = Date.now() + minutes * 60 * 1000;
+            STATE.timerRinging = false;
+
+            DOM.timerLabel.textContent = STATE.timerTotalLabel;
+            DOM.activeTimerPill.classList.remove('hidden', 'animate-pulse', 'bg-rose-500/40', 'border-rose-400');
+            DOM.activeTimerPill.classList.add('bg-amber-500/20', 'border-amber-400/40');
+
+            updateTimerDisplay();
+            STATE.timerInterval = setInterval(updateTimerDisplay, 500);
+            hideControlBar();
+        }
+
+        function updateTimerDisplay() {
+            if (!STATE.timerEndTime) return;
+            const remainingMs = STATE.timerEndTime - Date.now();
+
+            if (remainingMs <= 0) {
+                DOM.timerCountdown.textContent = '00:00';
+                DOM.timerLabel.textContent = `${STATE.timerTotalLabel} Done!`;
+                if (!STATE.timerRinging) {
+                    STATE.timerRinging = true;
+                    DOM.activeTimerPill.classList.remove('bg-amber-500/20', 'border-amber-400/40');
+                    DOM.activeTimerPill.classList.add('bg-rose-500/40', 'border-rose-400', 'animate-pulse');
+                    playGentleChime();
+                } else if (Math.abs(remainingMs) % 4000 < 550) {
+                    playGentleChime();
+                }
                 return;
             }
-            DOM.mediaWidget.classList.remove('hidden');
 
-            if (!mediaData || !mediaData.isPlaying) {
-                // Idle / Disconnected State
-                DOM.mediaTitle.textContent = 'No media playing';
-                DOM.mediaArtist.textContent = 'Connect via Spotify / Bluetooth';
-                DOM.mediaStatusBadge.innerHTML = `<span class="text-gray-400">Idle</span>`;
-                DOM.mediaEq.classList.add('hidden');
-                DOM.mediaProgressContainer.classList.add('hidden');
-                DOM.mediaArt.classList.add('hidden');
-                DOM.mediaArtFallback.classList.remove('hidden');
-                if (mediaInterval) clearInterval(mediaInterval);
-                return;
+            const totalSeconds = Math.ceil(remainingMs / 1000);
+            const mins = Math.floor(totalSeconds / 60).toString().padStart(2, '0');
+            const secs = (totalSeconds % 60).toString().padStart(2, '0');
+            DOM.timerCountdown.textContent = `${mins}:${secs}`;
+        }
+
+        function stopTimer() {
+            if (STATE.timerInterval) {
+                clearInterval(STATE.timerInterval);
+                STATE.timerInterval = null;
             }
-
-            // Active Playing State
-            DOM.mediaTitle.textContent = mediaData.title;
-            DOM.mediaArtist.textContent = mediaData.artist;
-            DOM.mediaStatusBadge.innerHTML = `
-                <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 dot-pulse" aria-hidden="true"></span>
-                <span>Now Playing</span>
-            `;
-            DOM.mediaEq.classList.remove('hidden');
-            DOM.mediaProgressContainer.classList.remove('hidden');
-            
-            if (mediaData.artworkUrl) {
-                DOM.mediaArt.src = mediaData.artworkUrl;
-                DOM.mediaArt.classList.remove('hidden');
-                DOM.mediaArtFallback.classList.add('hidden');
-            } else {
-                DOM.mediaArt.classList.add('hidden');
-                DOM.mediaArtFallback.classList.remove('hidden');
-            }
-
-            // Progress track loop based on CONFIG.MEDIA.DURATION_SECONDS
-            let progress = mediaData.initialProgress || 0;
-            const durationSec = Math.max(1, mediaData.durationSeconds || 240);
-            const stepPerSecond = 100 / durationSec;
-            DOM.mediaProgress.style.width = `${progress}%`;
-
-            if (mediaInterval) clearInterval(mediaInterval);
-            mediaInterval = setInterval(() => {
-                progress = (progress + stepPerSecond) % 100;
-                DOM.mediaProgress.style.width = `${progress}%`;
-            }, 1000);
+            STATE.timerEndTime = null;
+            STATE.timerRinging = false;
+            DOM.activeTimerPill.classList.add('hidden');
         }
 
         /**
-         * Initialization Lifecycle
+         * =====================================================================
+         * TAP-TO-TOGGLE FLOATING CONTROL BAR
+         * =====================================================================
+         */
+        function showControlBar() {
+            DOM.controlBar.classList.remove('opacity-0', 'pointer-events-none', 'translate-y-4');
+            DOM.controlBar.classList.add('opacity-100', 'pointer-events-auto', 'translate-y-0');
+
+            clearTimeout(STATE.controlBarTimeout);
+            STATE.controlBarTimeout = setTimeout(hideControlBar, 7000);
+        }
+
+        function hideControlBar() {
+            DOM.controlBar.classList.add('opacity-0', 'pointer-events-none', 'translate-y-4');
+            DOM.controlBar.classList.remove('opacity-100', 'pointer-events-auto', 'translate-y-0');
+        }
+
+        function setupControlBar() {
+            // Render quick timer preset buttons
+            const presetButtons = CONFIG.TIMERS.PRESETS_MINUTES.map(mins => `
+                <button type="button" data-timer-mins="${mins}" class="px-2.5 py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/35 border border-amber-400/30 active:scale-95 text-xs font-bold text-amber-200 transition">
+                    ${mins}m
+                </button>
+            `).join('');
+            DOM.timerPresetsGroup.insertAdjacentHTML('beforeend', presetButtons);
+
+            DOM.timerPresetsGroup.addEventListener('click', (e) => {
+                const btn = e.target.closest('[data-timer-mins]');
+                if (btn) {
+                    e.stopPropagation();
+                    startTimer(Number(btn.dataset.timerMins));
+                }
+            });
+
+            DOM.timerCancelBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                stopTimer();
+            });
+
+            // Switch City button
+            DOM.btnSwitchLocation.addEventListener('click', (e) => {
+                e.stopPropagation();
+                STATE.locationIndex = (STATE.locationIndex + 1) % CONFIG.LOCATIONS.length;
+                rebuildFormatters();
+                updateClock();
+                fetchWeather();
+                showControlBar();
+            });
+
+            // Toggle 12h / 24h clock
+            DOM.btnToggle24h.addEventListener('click', (e) => {
+                e.stopPropagation();
+                STATE.use24Hour = !STATE.use24Hour;
+                updateClock();
+                showControlBar();
+            });
+
+            // Cycle Wallpapers manually
+            DOM.btnCycleBg.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const bgKeys = Object.keys(CONFIG.BACKGROUNDS);
+                STATE.manualBgIndex = (STATE.manualBgIndex + 1) % bgKeys.length;
+                updateBackground(0, 1);
+                showControlBar();
+            });
+
+            // Manual Night Mode toggle
+            DOM.btnToggleNight.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const currentlyDimmed = DOM.root.style.filter.includes(`brightness(${CONFIG.NIGHT_MODE.BRIGHTNESS})`);
+                STATE.manualNightOverride = !currentlyDimmed;
+                updateClock();
+                showControlBar();
+            });
+
+            // Force Weather Refresh
+            DOM.btnRefreshWeather.addEventListener('click', (e) => {
+                e.stopPropagation();
+                fetchWeather();
+                hideControlBar();
+            });
+
+            // Tap anywhere on the screen to reveal controls
+            document.body.addEventListener('click', () => {
+                showControlBar();
+            });
+        }
+
+        /**
+         * =====================================================================
+         * INITIALIZATION LIFECYCLE
+         * =====================================================================
          */
         function initDashboard() {
-            // Apply configured location label, initial background, and forecast aria-label
-            DOM.weatherLocation.textContent = CONFIG.LOCATION_NAME;
+            rebuildFormatters();
+
+            const loc = getActiveLocation();
+            DOM.weatherLocation.textContent = loc.NAME;
             DOM.bgLayer1.src = CONFIG.BACKGROUNDS.DEFAULT;
-            DOM.forecastSection.setAttribute('aria-label', `${CONFIG.FORECAST_DAYS}-day weather forecast`);
+
+            // Hardware protection & touch controls
+            requestWakeLock();
+            document.addEventListener('visibilitychange', () => {
+                if (document.visibilityState === 'visible') requestWakeLock();
+            });
+            startPixelShift();
+            setupControlBar();
 
             // Clock tick based on CONFIG.CLOCK_INTERVAL_MS
             updateClock();
@@ -557,16 +887,6 @@
             // Fetch weather immediately, then per CONFIG.WEATHER_INTERVAL_MS without page reloads
             fetchWeather();
             setInterval(fetchWeather, CONFIG.WEATHER_INTERVAL_MS);
-
-            // Initialize media state from CONFIG.MEDIA
-            setMediaState({
-                isPlaying: CONFIG.MEDIA.IS_PLAYING,
-                title: CONFIG.MEDIA.TITLE,
-                artist: CONFIG.MEDIA.ARTIST,
-                artworkUrl: CONFIG.MEDIA.ARTWORK_URL,
-                durationSeconds: CONFIG.MEDIA.DURATION_SECONDS,
-                initialProgress: CONFIG.MEDIA.INITIAL_PROGRESS_PERCENT
-            });
         }
 
         window.addEventListener('DOMContentLoaded', initDashboard);
