@@ -133,25 +133,28 @@
     </div>
 
     <!-- Main Dashboard Container (Shifts subtly to prevent OLED/LCD burn-in) -->
-    <main id="dashboard-root" class="relative z-20 flex flex-col justify-between h-full w-full p-5 sm:p-8 md:p-10 pb-20 sm:pb-24">
+    <main id="dashboard-root" class="relative z-20 h-full w-full p-5 sm:p-8 md:p-10">
 
-        <!-- TOP-LEFT: Stacked HEBCAL Schedule -->
-        <header class="flex justify-between items-start w-full">
-            <section id="hebcal-card" aria-live="polite" aria-label="Jewish calendar and Shabbat times" class="max-w-xs sm:max-w-sm">
+        <!-- TOP-LEFT: Stacked HEBCAL Schedule (Absolute so it never shifts the centered hero) -->
+        <header class="relative z-30 flex justify-between items-start w-full pointer-events-none">
+            <section id="hebcal-card" aria-live="polite" aria-label="Jewish calendar and Shabbat times" class="max-w-xs sm:max-w-sm pointer-events-auto">
                 <div id="hebcal-events-list" class="flex flex-col gap-2 text-xs sm:text-sm text-white/95">
                     <div class="glass-panel rounded-xl px-3.5 py-2.5 text-white/60 shadow-lg">Loading schedule...</div>
                 </div>
             </section>
 
             <!-- Offline Indicator Badge (Top-Right if disconnected) -->
-            <div id="network-offline-pill" class="hidden inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-red-500/30 border border-red-400/50 text-red-100 text-xs font-semibold animate-pulse">
+            <div id="network-offline-pill" class="hidden pointer-events-auto inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-red-500/30 border border-red-400/50 text-red-100 text-xs font-semibold animate-pulse">
                 <span class="w-2 h-2 rounded-full bg-red-400"></span>
                 <span>Offline</span>
             </div>
         </header>
 
+        <!-- TRUE VERTICALLY & HORIZONTALLY CENTERED HERO: [NOV / 11] + [TIME] on top row, [Weather Pills] underneath -->
+        <section class="fixed inset-0 z-20 flex flex-col items-center justify-center text-center text-shadow-heavy px-4 pointer-events-none">
+
         <!-- CENTER HERO: [NOV / 11] + [TIME] on top row, [Weather] directly underneath -->
-        <section class="my-auto mx-auto flex flex-col items-center justify-center text-center text-shadow-heavy w-full max-w-4xl px-2">
+        <section class="my-auto mx-auto flex flex-col items-center justify-center text-center text-shadow-heavy w-full max-w-4xl px-2 gap-4 sm:gap-6">
 
             <!-- Row 1: Stacked Month/Day on Left + Large TIME on Right -->
             <div class="flex items-center justify-center gap-3 sm:gap-5 md:gap-6">
@@ -169,15 +172,16 @@
             </div>
 
             <!-- Row 2: Weather Directly Below TIME -->
-            <div aria-live="polite" aria-label="Current weather and environmental conditions" class="flex flex-col items-center mt-2 sm:mt-3 w-full">
-                <div class="flex items-center justify-center gap-2.5 sm:gap-3.5">
-                    <span id="weather-icon" class="text-3xl sm:text-4xl md:text-5xl" aria-hidden="true">🌡️</span>
-                    <span id="weather-temp" class="text-4xl sm:text-5xl md:text-6xl font-bold tracking-tight">--°</span>
-                    <span id="weather-desc" class="text-xl sm:text-2xl md:text-3xl font-medium text-white/95">Loading weather...</span>
+            <div aria-live="polite" aria-label="Current weather and environmental conditions" class="flex flex-col items-center mt-4 sm:mt-5 gap-4 sm:gap-5 w-full">
+                <div class="glass-pill inline-flex items-center justify-center gap-2 sm:gap-3 px-4 py-1.5 sm:px-5 sm:py-2 rounded-full shadow-lg">
+                    <span id="weather-icon" class="text-2xl sm:text-3xl md:text-4xl" aria-hidden="true">🌡️</span>
+                    <span id="weather-temp" class="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight">--°</span>
+                    <span class="h-5 sm:h-6 w-px bg-white/25 mx-0.5" aria-hidden="true"></span>
+                    <span id="weather-desc" class="text-base sm:text-xl md:text-2xl font-medium text-white/95">Loading weather...</span>
                 </div>
 
                 <!-- Compact Environmental Metric Pills -->
-                <div class="flex flex-wrap justify-center gap-1.5 sm:gap-2 mt-3 max-w-2xl">
+                <div class="flex flex-wrap justify-center gap-1.5 sm:gap-2 max-w-2xl">
                     <span id="pill-feels" class="glass-pill px-2.5 py-1 rounded-full text-xs font-medium text-white/90">Feels --°</span>
                     <span id="pill-rain" class="glass-pill px-2.5 py-1 rounded-full text-xs font-medium text-sky-200">💧 --%</span>
                     <span id="pill-uv" class="glass-pill px-2.5 py-1 rounded-full text-xs font-medium text-amber-200">☀️ UV --</span>
@@ -187,9 +191,6 @@
             </div>
 
         </section>
-
-        <!-- Bottom Spacer to keep Center Hero balanced above the fixed bottom-right Timers dock -->
-        <div class="h-4 sm:h-6 pointer-events-none"></div>
 
     </main>
 
