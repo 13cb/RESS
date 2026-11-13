@@ -163,9 +163,9 @@
 
         <!-- Top Header: Hebcal Schedule (Left) & Offline Badge (Right) -->
         <header class="relative z-30 flex justify-between items-start w-full pointer-events-none">
-            <section id="hebcal-card" aria-live="polite" aria-label="Jewish calendar and Shabbat times" class="w-full max-w-[clamp(8.5rem,min(19vw,34vh),22rem)] pointer-events-auto">
-                <div id="hebcal-events-list" class="flex flex-col gap-[clamp(0.3rem,0.9vh,0.65rem)] text-[clamp(0.65rem,min(0.95vw,2.1vh),1.05rem)] text-white/95">
-                    <div class="glass-panel rounded-[clamp(0.65rem,1.5vh,1rem)] px-[clamp(0.55rem,1vw,1rem)] py-[clamp(0.35rem,1vh,0.75rem)] text-white/60">Loading schedule...</div>
+            <section id="hebcal-card" aria-live="polite" aria-label="Jewish calendar and Shabbat times" class="w-full max-w-[clamp(9.75rem,min(22vw,39vh),25rem)] pointer-events-auto">
+                <div id="hebcal-events-list" class="flex flex-col gap-[clamp(0.35rem,1.05vh,0.75rem)] text-[clamp(0.75rem,min(1.1vw,2.4vh),1.2rem)] text-white/95">
+                    <div class="glass-panel rounded-[clamp(0.75rem,1.75vh,1.15rem)] px-[clamp(0.65rem,1.15vw,1.15rem)] py-[clamp(0.4rem,1.15vh,0.85rem)] text-white/60">Loading schedule...</div>
                 </div>
             </section>
 
@@ -598,9 +598,9 @@
         function renderHebcalEvents(items) {
             const visible = items.slice(0, CONFIG.HEBCAL.MAX_ITEMS);
             DOM.hebcalEventsList.innerHTML = visible.map(item => `
-                <div class="glass-panel rounded-[clamp(0.65rem,1.5vh,1rem)] px-[clamp(0.55rem,1vw,1rem)] py-[clamp(0.35rem,1vh,0.75rem)] shadow-lg">
+                <div class="glass-panel rounded-[clamp(0.75rem,1.75vh,1.15rem)] px-[clamp(0.65rem,1.15vw,1.15rem)] py-[clamp(0.4rem,1.15vh,0.85rem)] shadow-lg">
                     <div class="font-semibold text-white leading-tight truncate">${item.title}</div>
-                    ${item.sub ? `<div class="text-[clamp(0.58rem,min(0.8vw,1.75vh),0.9rem)] text-amber-200/90 mt-0.5 font-medium truncate">${item.sub}</div>` : ''}
+                    ${item.sub ? `<div class="text-[clamp(0.67rem,min(0.92vw,2vh),1.05rem)] text-amber-200/90 mt-0.5 font-medium truncate">${item.sub}</div>` : ''}
                 </div>
             `).join('');
         }
