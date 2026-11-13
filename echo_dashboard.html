@@ -30,9 +30,9 @@
             // 4. HEBCAL SHABBAT & HOLIDAY CALENDAR SETTINGS
             HEBCAL_ENABLED: true,             // true to show Hebcal events, false to hide
             CANDLE_LIGHTING_MINS: 18,         // Minutes before sunset (e.g., 18, 20, 30, 40)
-            HAVDALAH_MINS: 50,                // Minutes after sunset for Havdalah (e.g., 42, 50, 72)
+            HAVDALAH_MINS: 5,                 // Minutes after sunset for Havdalah (e.g., 42, 50, 72)
             ISRAEL_SCHEDULE: false,           // true if located in Israel (1-day Yom Tov & Israeli Parsha), false for Diaspora
-            MAX_CALENDAR_ITEMS: 4,            // Maximum number of event cards to show in top-left
+            MAX_CALENDAR_ITEMS: 5,            // Maximum number of event cards to show in top-left
 
             // 5. AUTO NIGHT DIMMING MODE (24-hour format: 0 to 23)
             NIGHT_MODE_ENABLED: true,
@@ -660,12 +660,14 @@
         }
 
         async function cycleAmbientSound() {
-            const modes = ['off', 'brown', 'rain', 'white'];
+            const modes = ['off', 'white', 'fan', 'brown', 'rain', 'bowl'];
             const labels = {
                 off: '🎧 Off',
+                white: '💨 White',
+                fan: '🌀 Fan',
                 brown: '🌊 Brown',
                 rain: '🌧️ Rain',
-                white: '💨 White'
+                bowl: '🔔 Bowl'
             };
 
             const nextMode = modes[(modes.indexOf(state.ambientMode) + 1) % modes.length];
@@ -677,17 +679,136 @@
 
             try {
                 await Tone.start();
-                const noiseType = nextMode === 'rain' ? 'pink' : nextMode;
-                const noise = new Tone.Noise(noiseType);
-                const filter = new Tone.Filter({
-                    type: 'lowpass',
-                    frequency: nextMode === 'brown' ? 320 : nextMode === 'rain' ? 950 : 2800
-                }).toDestination();
 
-                noise.volume.value = CONFIG.SOUND.VOLUME_DB;
-                noise.connect(filter);
-                noise.start();
-                state.ambientNodes = { noise, filter };
+                if (nextMode === 'fan') {
+                    // Oscillating box-fan rumble with gentle LFO air sweep
+                    const noise = new Tone.Noise('brown');
+                    const filter = new Tone.Filter({ type: 'lowpass', frequency: 190, Q: 1.8 }).toDestination();
+                    const lfo = new Tone.LFO({ frequency: 0.22, min: 130, max: 240 }).start();
+
+                    lfo.connect(filter.frequency);
+                    noise.volume.value = CONFIG.SOUND.VOLUME_DB + 4;
+                    noise.connect(filter);
+                    noise.start();
+
+                    state.ambientNodes = {
+                        dispose: () => {
+                            lfo.stop();
+                            lfo.dispose();
+                            noise.stop();
+                            noise.dispose();
+                            filter.dispose();
+                        }
+                    };
+                } else if (nextMode === 'rain') {
+                    // Layered rainfall: bandpass mist + low shower body + random water droplets
+                    const mistNoise = new Tone.Noise('white');
+                    const mistFilter = new Tone.Filter({ type: 'bandpass', frequency: 1650, Q: 0.65 }).toDestination();
+                    mistNoise.volume.value = CONFIG.SOUND.VOLUME_DB - 3;
+                    mistNoise.connect(mistFilter);
+                    mistNoise.start();
+
+                    const bodyNoise = new Tone.Noise('brown');
+                    const bodyFilter = new Tone.Filter({ type: 'lowpass', frequency: 420 }).toDestination();
+                    bodyNoise.volume.value = CONFIG.SOUND.VOLUME_DB;
+                    bodyNoise.connect(bodyFilter);
+                    bodyNoise.start();
+
+                    const dropReverb = new Tone.Reverb({ decay: 1.8, wet: 0.45 }).toDestination();
+                    const dropSynth = new Tone.MembraneSynth({
+                        pitchDecay: 0.015,
+                        octaves: 2.5,
+                        envelope: { attack: 0.002, decay: 0.08, sustain: 0, release: 0.1 }
+                    }).connect(dropReverb);
+                    dropSynth.volume.value = CONFIG.SOUND.VOLUME_DB - 14;
+
+                    const dropPitches = ['G5', 'A5', 'C6', 'D6', 'E6', 'G6', 'A6'];
+                    let active = true;
+                    let dropTimer = null;
+
+                    const triggerDroplet = () => {
+                        if (!active) return;
+                        const pitch = dropPitches[Math.floor(Math.random() * dropPitches.length)];
+                        dropSynth.triggerAttackRelease(pitch, '32n', undefined, 0.25 + Math.random() * 0.45);
+                        dropTimer = setTimeout(triggerDroplet, 180 + Math.random() * 650);
+                    };
+                    triggerDroplet();
+
+                    state.ambientNodes = {
+                        dispose: () => {
+                            active = false;
+                            if (dropTimer) clearTimeout(dropTimer);
+                            mistNoise.stop();
+                            mistNoise.dispose();
+                            mistFilter.dispose();
+                            bodyNoise.stop();
+                            bodyNoise.dispose();
+                            bodyFilter.dispose();
+                            dropSynth.dispose();
+                            dropReverb.dispose();
+                        }
+                    };
+                } else if (nextMode === 'bowl') {
+                    // Multi-pitch harmonic crystal singing bowl sound bath
+                    const reverb = new Tone.Reverb({ decay: 7, wet: 0.65 }).toDestination();
+                    const synth = new Tone.PolySynth(Tone.Synth, {
+                        oscillator: { type: 'sine' },
+                        envelope: { attack: 1.8, decay: 2.5, sustain: 0.35, release: 5.5 }
+                    }).connect(reverb);
+                    synth.volume.value = CONFIG.SOUND.VOLUME_DB - 2;
+
+                    const pitches = [216, 256, 288, 324, 384, 432, 512, 576, 648];
+                    let active = true;
+                    let intervalId = null;
+
+                    const strikeBowl = () => {
+                        if (!active) return;
+                        const freq = pitches[Math.floor(Math.random() * pitches.length)];
+                        synth.triggerAttackRelease(freq, 4.5);
+                        if (Math.random() > 0.45) {
+                            const harmonic = pitches[Math.floor(Math.random() * pitches.length)];
+                            if (harmonic !== freq) {
+                                setTimeout(() => {
+                                    if (active) synth.triggerAttackRelease(harmonic, 4.0);
+                                }, 1400);
+                            }
+                        }
+                    };
+
+                    strikeBowl();
+                    intervalId = setInterval(strikeBowl, 4800);
+
+                    state.ambientNodes = {
+                        dispose: () => {
+                            active = false;
+                            if (intervalId) clearInterval(intervalId);
+                            synth.releaseAll();
+                            setTimeout(() => {
+                                synth.dispose();
+                                reverb.dispose();
+                            }, 200);
+                        }
+                    };
+                } else {
+                    // White or Brown noise
+                    const noise = new Tone.Noise(nextMode);
+                    const filter = new Tone.Filter({
+                        type: 'lowpass',
+                        frequency: nextMode === 'brown' ? 320 : 2800
+                    }).toDestination();
+
+                    noise.volume.value = CONFIG.SOUND.VOLUME_DB;
+                    noise.connect(filter);
+                    noise.start();
+
+                    state.ambientNodes = {
+                        dispose: () => {
+                            noise.stop();
+                            noise.dispose();
+                            filter.dispose();
+                        }
+                    };
+                }
             } catch (err) {
                 console.warn('Ambient audio failed:', err);
                 state.ambientMode = 'off';
@@ -698,9 +819,9 @@
         function stopAmbientSound() {
             if (state.ambientNodes) {
                 try {
-                    state.ambientNodes.noise.stop();
-                    state.ambientNodes.noise.dispose();
-                    state.ambientNodes.filter.dispose();
+                    if (typeof state.ambientNodes.dispose === 'function') {
+                        state.ambientNodes.dispose();
+                    }
                 } catch (_) {}
                 state.ambientNodes = null;
             }
