@@ -163,9 +163,9 @@
 
         <!-- Top Header: Hebcal Schedule (Left) & Offline Badge (Right) -->
         <header class="relative z-30 flex justify-between items-start w-full pointer-events-none">
-            <section id="hebcal-card" aria-live="polite" aria-label="Jewish calendar and Shabbat times" class="w-full max-w-[clamp(15rem,26vw,28rem)] pointer-events-auto">
-                <div id="hebcal-events-list" class="flex flex-col gap-2.5 sm:gap-3 text-[clamp(0.85rem,1.2vw,1.2rem)] text-white/95">
-                    <div class="glass-panel rounded-2xl px-4 py-3 sm:px-5 sm:py-3.5 text-white/60">Loading schedule...</div>
+            <section id="hebcal-card" aria-live="polite" aria-label="Jewish calendar and Shabbat times" class="w-full max-w-[clamp(12rem,21vw,23rem)] pointer-events-auto">
+                <div id="hebcal-events-list" class="flex flex-col gap-2 sm:gap-2.5 text-[clamp(0.8rem,1.05vw,1.1rem)] text-white/95">
+                    <div class="glass-panel rounded-2xl px-3.5 py-2.5 sm:px-4 sm:py-3 text-white/60">Loading schedule...</div>
                 </div>
             </section>
 
@@ -176,19 +176,19 @@
         </header>
 
         <!-- Centered Hero: Date, Clock & Weather -->
-        <section class="fixed inset-0 z-20 flex flex-col items-center justify-center text-center text-shadow-heavy px-4 pointer-events-none">
-            <div class="flex flex-col items-center justify-center w-full max-w-4xl gap-4 sm:gap-5">
+        <section class="fixed inset-0 z-20 flex flex-col items-center justify-center text-center text-shadow-heavy px-[clamp(1rem,23vw,25rem)] pointer-events-none">
+            <div class="flex flex-col items-center justify-center w-full max-w-3xl gap-4 sm:gap-5">
 
                 <!-- Stacked Date & Digital Clock -->
-                <div class="flex items-center justify-center gap-3.5 sm:gap-5 md:gap-6">
-                    <div aria-live="polite" class="flex flex-col items-center justify-center leading-none border-r border-white/25 pr-3.5 sm:pr-5 py-1">
-                        <span id="date-month" class="text-xl sm:text-2xl md:text-3xl font-bold uppercase tracking-widest text-amber-200/95">---</span>
-                        <span id="date-day" class="text-3xl sm:text-4xl md:text-5xl font-black tracking-tight tabular-nums mt-0.5">--</span>
+                <div class="flex items-center justify-center gap-3 sm:gap-4 md:gap-5">
+                    <div aria-live="polite" class="flex flex-col items-center justify-center leading-none border-r border-white/25 pr-3 sm:pr-4 py-1">
+                        <span id="date-month" class="text-[clamp(1rem,1.6vw,1.75rem)] font-bold uppercase tracking-widest text-amber-200/95">---</span>
+                        <span id="date-day" class="text-[clamp(1.65rem,2.6vw,2.85rem)] font-black tracking-tight tabular-nums mt-0.5">--</span>
                     </div>
 
-                    <div aria-live="off" class="flex items-baseline gap-1.5 sm:gap-2.5">
-                        <div id="time" class="text-7xl sm:text-8xl md:text-9xl lg:text-[10rem] font-black leading-none tracking-tight tabular-nums">--:--</div>
-                        <div id="ampm" class="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold opacity-90"></div>
+                    <div aria-live="off" class="flex items-baseline gap-1.5 sm:gap-2">
+                        <div id="time" class="text-[clamp(3.75rem,8.5vw,8.75rem)] font-black leading-none tracking-tight tabular-nums">--:--</div>
+                        <div id="ampm" class="text-[clamp(1.1rem,2vw,2.15rem)] font-bold opacity-90"></div>
                     </div>
                 </div>
 
@@ -598,9 +598,9 @@
         function renderHebcalEvents(items) {
             const visible = items.slice(0, CONFIG.HEBCAL.MAX_ITEMS);
             DOM.hebcalEventsList.innerHTML = visible.map(item => `
-                <div class="glass-panel rounded-2xl px-4 py-3 sm:px-5 sm:py-3.5 shadow-lg">
+                <div class="glass-panel rounded-2xl px-3.5 py-2.5 sm:px-4 sm:py-3 shadow-lg">
                     <div class="font-semibold text-white leading-snug">${item.title}</div>
-                    ${item.sub ? `<div class="text-[clamp(0.75rem,0.95vw,1rem)] text-amber-200/90 mt-1 font-medium">${item.sub}</div>` : ''}
+                    ${item.sub ? `<div class="text-[clamp(0.7rem,0.85vw,0.95rem)] text-amber-200/90 mt-0.5 font-medium">${item.sub}</div>` : ''}
                 </div>
             `).join('');
         }
