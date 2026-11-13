@@ -33,10 +33,10 @@
             HAVDALAH_MINS: 5,                 // Minutes after sunset for Havdalah (e.g., 42, 50, 72)
             ISRAEL_SCHEDULE: false,           // true if located in Israel (1-day Yom Tov & Israeli Parsha), false for Diaspora
             MAX_CALENDAR_ITEMS: 5,            // Maximum number of event cards to show in top-left
-
-            // 5. AUTO NIGHT DIMMING MODE (24-hour format: 0 to 23)
+            // 5. AUTO NIGHT DIMMING & BEDSIDE RED/AMBER CLOCK MODE (24-hour format: 0 to 23)
             NIGHT_MODE_ENABLED: true,
-            NIGHT_START_HOUR: 22,             // 22 = 10:00 PM
+            NIGHT_START_HOUR: 22,             // 22 = 10:00 PM (Dimmed Night Mode)
+            BEDSIDE_START_HOUR: 23,           // 23 = 11:00 PM (Deep Red/Amber Bedside Mode)
             NIGHT_END_HOUR: 6                 // 6 = 6:00 AM
         };
     </script>
@@ -103,6 +103,27 @@
             background: radial-gradient(circle at center, rgba(15, 8, 0, 0.55) 0%, rgba(0, 0, 0, 0.85) 100%);
             transition: opacity 1.5s ease-in-out;
             pointer-events: none;
+        }
+
+        /* Deep Red/Amber Bedside Clock Mode for Night-Vision Preservation */
+        body.bedside-mode #bg-layer-1,
+        body.bedside-mode #bg-layer-2 {
+            opacity: 0.08 !important;
+            filter: grayscale(100%) brightness(0.3);
+        }
+        body.bedside-mode #night-overlay {
+            background: radial-gradient(circle at center, rgba(20, 3, 0, 0.88) 0%, rgba(0, 0, 0, 0.97) 100%);
+            opacity: 1 !important;
+        }
+        body.bedside-mode #dashboard-root {
+            filter: sepia(100%) hue-rotate(-38deg) saturate(420%) brightness(0.68);
+        }
+        body.bedside-mode #control-dock {
+            opacity: 0.45;
+            filter: sepia(100%) hue-rotate(-38deg) saturate(350%) brightness(0.65);
+        }
+        body.bedside-mode #control-dock:hover {
+            opacity: 0.95;
         }
 
         #control-dock {
@@ -208,6 +229,12 @@
                         <span id="pill-aqi" class="glass-pill px-3 py-1 rounded-full text-xs font-medium text-emerald-200 tabular-nums">🍃 AQI --</span>
                         <span id="pill-sun" class="glass-pill px-3 py-1 rounded-full text-xs font-medium text-orange-200 tabular-nums">🌅 --:--</span>
                     </div>
+
+                    <!-- Severe Weather / Frost Alert Pill (Only shown when triggered) -->
+                    <div id="weather-alert-pill" class="hidden inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-amber-500/25 border border-amber-300/50 text-amber-100 text-xs sm:text-sm font-semibold shadow-lg backdrop-blur-md">
+                        <span id="weather-alert-icon">⚠️</span>
+                        <span id="weather-alert-text">Frost Advisory</span>
+                    </div>
                 </div>
 
             </div>
@@ -241,6 +268,7 @@
             NIGHT_MODE: {
                 ENABLED: USER_SETTINGS.NIGHT_MODE_ENABLED,
                 START_HOUR: USER_SETTINGS.NIGHT_START_HOUR,
+                BEDSIDE_START_HOUR: USER_SETTINGS.BEDSIDE_START_HOUR,
                 END_HOUR: USER_SETTINGS.NIGHT_END_HOUR
             },
 
@@ -315,6 +343,9 @@
             pillUv: document.getElementById('pill-uv'),
             pillAqi: document.getElementById('pill-aqi'),
             pillSun: document.getElementById('pill-sun'),
+            weatherAlertPill: document.getElementById('weather-alert-pill'),
+            weatherAlertIcon: document.getElementById('weather-alert-icon'),
+            weatherAlertText: document.getElementById('weather-alert-text'),
             btnCancelTimer: document.getElementById('btn-cancel-timer'),
             btnAmbientSound: document.getElementById('btn-ambient-sound'),
             btnCycleBg: document.getElementById('btn-cycle-bg'),
@@ -328,7 +359,8 @@
             activeBgLayer: 1,
             bgCategory: 'clear',
             bgIndex: 0,
-            manualNightOverride: null,
+            displayModeOverride: null, // null = auto, 'day' | 'night' | 'bedside'
+            hebcalItems: [],
             timerEndTime: null,
             timerInterval: null,
             ambientMode: 'off',
@@ -391,27 +423,39 @@
             DOM.dateMonth.textContent = monthFormatter.format(now).toUpperCase();
             DOM.dateDay.textContent = dayFormatter.format(now);
             updateNightMode(now);
+            updateCandleCountdown(now);
+        }
+
+        function isHourInRange(hour, start, end) {
+            if (start === end) return false;
+            return start > end ? (hour >= start || hour < end) : (hour >= start && hour < end);
         }
 
         function updateNightMode(now = new Date()) {
-            if (!CONFIG.NIGHT_MODE.ENABLED && state.manualNightOverride === null) {
-                DOM.nightOverlay.style.opacity = '0';
-                return;
-            }
+            let mode = 'day';
 
-            let isNight = false;
-            if (state.manualNightOverride !== null) {
-                isNight = state.manualNightOverride;
-            } else {
+            if (state.displayModeOverride !== null) {
+                mode = state.displayModeOverride;
+            } else if (CONFIG.NIGHT_MODE.ENABLED) {
                 const h = parseInt(nightHourFormatter.format(now), 10) % 24;
-                const { START_HOUR, END_HOUR } = CONFIG.NIGHT_MODE;
-                isNight = START_HOUR > END_HOUR
-                    ? (h >= START_HOUR || h < END_HOUR)
-                    : (h >= START_HOUR && h < END_HOUR);
+                const { START_HOUR, BEDSIDE_START_HOUR, END_HOUR } = CONFIG.NIGHT_MODE;
+                if (isHourInRange(h, BEDSIDE_START_HOUR, END_HOUR)) {
+                    mode = 'bedside';
+                } else if (isHourInRange(h, START_HOUR, END_HOUR)) {
+                    mode = 'night';
+                }
             }
 
-            DOM.nightOverlay.style.opacity = isNight ? '1' : '0';
-            DOM.btnToggleNight.textContent = isNight ? '☀️ Day' : '🌙 Night';
+            document.body.classList.toggle('bedside-mode', mode === 'bedside');
+            DOM.nightOverlay.style.opacity = (mode === 'night' || mode === 'bedside') ? '1' : '0';
+
+            if (mode === 'bedside') {
+                DOM.btnToggleNight.textContent = '🔴 Bedside';
+            } else if (mode === 'night') {
+                DOM.btnToggleNight.textContent = '🌙 Night';
+            } else {
+                DOM.btnToggleNight.textContent = '☀️ Day';
+            }
         }
 
         /* ==========================================================================
@@ -471,7 +515,7 @@
             const cacheKey = `${CONFIG.STORAGE_KEY}_${LAT}_${LON}_${CONFIG.TEMP_UNIT}_${CONFIG.TIMEZONE}`;
             const tzParam = encodeURIComponent(CONFIG.TIMEZONE || 'auto');
 
-            const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}&current=temperature_2m,apparent_temperature,is_day,weather_code&daily=sunrise,sunset,uv_index_max,precipitation_probability_max&temperature_unit=${CONFIG.TEMP_UNIT}&timezone=${tzParam}&forecast_days=1`;
+            const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}&current=temperature_2m,apparent_temperature,is_day,weather_code,wind_gusts_10m&daily=sunrise,sunset,uv_index_max,precipitation_probability_max,temperature_2m_min&temperature_unit=${CONFIG.TEMP_UNIT}&wind_speed_unit=mph&timezone=${tzParam}&forecast_days=1`;
             const aqiUrl = `https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${LAT}&longitude=${LON}&current=us_aqi`;
 
             try {
@@ -485,6 +529,8 @@
                     feelsLike: Math.round(weatherData.current.apparent_temperature),
                     isDay: weatherData.current.is_day === 1,
                     code: weatherData.current.weather_code,
+                    windGusts: Math.round(weatherData.current.wind_gusts_10m ?? 0),
+                    tempMin: Math.round(weatherData.daily?.temperature_2m_min?.[0] ?? weatherData.current.temperature_2m),
                     rainChance: weatherData.daily?.precipitation_probability_max?.[0] ?? 0,
                     uvMax: Math.round(weatherData.daily?.uv_index_max?.[0] ?? 0),
                     sunrise: weatherData.daily?.sunrise?.[0] ?? null,
@@ -503,6 +549,30 @@
                     DOM.weatherDesc.textContent = 'Weather unavailable';
                 }
             }
+        }
+
+        function evaluateWeatherAlert(data) {
+            const isF = CONFIG.TEMP_UNIT === 'fahrenheit';
+            const freezeThreshold = isF ? 32 : 0;
+            const frostThreshold = isF ? 36 : 2;
+            const severeCodes = [65, 75, 82, 95, 96, 99];
+
+            if (severeCodes.includes(data.code)) {
+                return { icon: '⛈️', text: `Severe Weather: ${WEATHER_CODES[data.code]?.desc || 'Storm Warning'}` };
+            }
+            if (data.windGusts >= 35) {
+                return { icon: '💨', text: `High Wind Gusts (${data.windGusts} mph)` };
+            }
+            if (data.temp <= freezeThreshold) {
+                return { icon: '🥶', text: `Freeze Warning (${data.temp}°)` };
+            }
+            if (data.temp <= frostThreshold || data.tempMin <= frostThreshold) {
+                return { icon: '❄️', text: `Frost Advisory (Low ${data.tempMin}°)` };
+            }
+            if (data.aqi !== null && data.aqi >= 150) {
+                return { icon: '😷', text: `Unhealthy Air Quality (AQI ${data.aqi})` };
+            }
+            return null;
         }
 
         function renderWeather(data) {
@@ -528,6 +598,15 @@
                     hour12: !CONFIG.USE_24_HOUR
                 });
                 DOM.pillSun.textContent = `${label} ${formatted}`;
+            }
+
+            const alertInfo = evaluateWeatherAlert(data);
+            if (alertInfo) {
+                DOM.weatherAlertIcon.textContent = alertInfo.icon;
+                DOM.weatherAlertText.textContent = alertInfo.text;
+                DOM.weatherAlertPill.classList.remove('hidden');
+            } else {
+                DOM.weatherAlertPill.classList.add('hidden');
             }
 
             const bgCategory = data.isDay ? info.category : 'night';
@@ -576,7 +655,12 @@
                             subStr = hasTime ? `${fmtDay.format(d)} · ${fmtTime.format(d)}` : fmtDay.format(d);
                         }
                         const icon = categoryIcons[item.category] || '📅';
-                        return { title: `${icon} ${item.title}`, sub: subStr };
+                        return {
+                            title: `${icon} ${item.title}`,
+                            sub: subStr,
+                            category: item.category,
+                            isoDate: hasTime ? item.date : null
+                        };
                     });
 
                     localStorage.setItem(cacheKey, JSON.stringify(parsed));
@@ -596,13 +680,48 @@
         }
 
         function renderHebcalEvents(items) {
-            const visible = items.slice(0, CONFIG.HEBCAL.MAX_ITEMS);
-            DOM.hebcalEventsList.innerHTML = visible.map(item => `
-                <div class="glass-panel rounded-[clamp(0.75rem,1.75vh,1.15rem)] px-[clamp(0.65rem,1.15vw,1.15rem)] py-[clamp(0.4rem,1.15vh,0.85rem)] shadow-lg">
-                    <div class="font-semibold text-white leading-tight truncate">${item.title}</div>
+            state.hebcalItems = items.slice(0, CONFIG.HEBCAL.MAX_ITEMS);
+            DOM.hebcalEventsList.innerHTML = state.hebcalItems.map((item, idx) => `
+                <div id="hebcal-item-${idx}" class="glass-panel rounded-[clamp(0.75rem,1.75vh,1.15rem)] px-[clamp(0.65rem,1.15vw,1.15rem)] py-[clamp(0.4rem,1.15vh,0.85rem)] shadow-lg transition-all duration-500">
+                    <div class="flex items-center justify-between gap-2">
+                        <div class="font-semibold text-white leading-tight truncate">${item.title}</div>
+                        <span id="hebcal-countdown-${idx}" class="hidden shrink-0 px-2 py-0.5 rounded-full bg-amber-400/25 border border-amber-300/50 text-amber-200 text-[clamp(0.62rem,min(0.82vw,1.75vh),0.9rem)] font-bold tabular-nums"></span>
+                    </div>
                     ${item.sub ? `<div class="text-[clamp(0.67rem,min(0.92vw,2vh),1.05rem)] text-amber-200/90 mt-0.5 font-medium truncate">${item.sub}</div>` : ''}
                 </div>
             `).join('');
+            updateCandleCountdown(new Date());
+        }
+
+        function updateCandleCountdown(now = new Date()) {
+            const windowMs = 3 * 60 * 60 * 1000; // Highlight within 3 hours before candle lighting
+            state.hebcalItems.forEach((item, idx) => {
+                const cardEl = document.getElementById(`hebcal-item-${idx}`);
+                const badgeEl = document.getElementById(`hebcal-countdown-${idx}`);
+                if (!cardEl || !badgeEl) return;
+
+                if (item.category === 'candles' && item.isoDate) {
+                    const targetMs = new Date(item.isoDate).getTime();
+                    const diffMs = targetMs - now.getTime();
+
+                    if (diffMs > 0 && diffMs <= windowMs) {
+                        const totalMins = Math.floor(diffMs / 60000);
+                        const hrs = Math.floor(totalMins / 60);
+                        const mins = totalMins % 60;
+                        const secs = Math.floor((diffMs % 60000) / 1000);
+
+                        badgeEl.textContent = hrs > 0
+                            ? `in ${hrs}h ${mins}m`
+                            : (mins > 0 ? `in ${mins}m ${String(secs).padStart(2, '0')}s` : `in ${secs}s`);
+                        badgeEl.classList.remove('hidden');
+                        cardEl.classList.add('ring-1', 'ring-amber-300/60', 'bg-amber-950/40');
+                        return;
+                    }
+                }
+
+                badgeEl.classList.add('hidden');
+                cardEl.classList.remove('ring-1', 'ring-amber-300/60', 'bg-amber-950/40');
+            });
         }
 
         /* ==========================================================================
@@ -862,8 +981,11 @@
             DOM.btnCycleBg.addEventListener('click', () => setWallpaper(state.bgCategory, true));
 
             DOM.btnToggleNight.addEventListener('click', () => {
-                const currentlyNight = DOM.nightOverlay.style.opacity === '1';
-                state.manualNightOverride = !currentlyNight;
+                const cycle = ['day', 'night', 'bedside'];
+                const current = document.body.classList.contains('bedside-mode')
+                    ? 'bedside'
+                    : (DOM.nightOverlay.style.opacity === '1' ? 'night' : 'day');
+                state.displayModeOverride = cycle[(cycle.indexOf(current) + 1) % cycle.length];
                 updateNightMode();
             });
 
