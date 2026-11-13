@@ -73,9 +73,9 @@
             pointer-events: none;
         }
 
-        /* Always-visible subtle bottom-left control dock */
+        /* Always-visible subtle bottom-right control dock */
         #control-dock {
-            opacity: 0.8;
+            opacity: 0.85;
             transition: opacity 0.25s ease, transform 0.25s ease;
         }
         #control-dock:hover,
@@ -106,13 +106,14 @@
     <div id="night-overlay" class="absolute inset-0 z-30 opacity-0"></div>
 
     <!-- Full-Screen Blackout Sleep Overlay (Double-Tap or Dock Button to toggle) -->
-    <div id="blackout-overlay" class="fixed inset-0 bg-black z-50 hidden flex flex-col items-center justify-center cursor-pointer" aria-label="Screen off mode. Tap anywhere to wake.">
-        <span class="text-white/25 text-sm tracking-widest uppercase select-none">Tap anywhere to wake</span>
+    <div id="blackout-overlay" class="hidden fixed inset-0 bg-black z-50 cursor-pointer flex items-center justify-center">
+        <span class="text-white/20 text-xs uppercase tracking-widest select-none">Tap anywhere to wake</span>
     </div>
 
-    <!-- Always-Present Bottom-Right Touch Control Dock -->
-    <div id="control-dock" class="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-40">
-        <div class="glass-panel rounded-2xl p-2 flex flex-wrap justify-end items-center gap-1.5 shadow-2xl text-xs sm:text-sm font-medium">
+    <!-- Always-Present Bottom-Center Touch Control Dock (TIMERS & Controls) -->
+    <div id="control-dock" class="fixed bottom-4 sm:bottom-6 left-1/2 -translate-x-1/2 z-40 w-max max-w-[95vw]">
+        <div class="glass-panel rounded-2xl p-2 sm:p-2.5 flex flex-wrap justify-center items-center gap-1.5 shadow-2xl text-xs sm:text-sm font-medium">
+            <span class="text-[11px] font-bold uppercase tracking-wider text-white/60 px-1.5 hidden sm:inline">Timers</span>
             <!-- Quick Kitchen Timers -->
             <button type="button" data-timer="5" class="timer-btn px-2.5 py-1.5 rounded-xl bg-white/10 hover:bg-white/25 active:scale-95 transition">⏱️ 5m</button>
             <button type="button" data-timer="10" class="timer-btn px-2.5 py-1.5 rounded-xl bg-white/10 hover:bg-white/25 active:scale-95 transition">10m</button>
@@ -132,39 +133,63 @@
     </div>
 
     <!-- Main Dashboard Container (Shifts subtly to prevent OLED/LCD burn-in) -->
-    <main id="dashboard-root" class="relative z-20 flex flex-col justify-between h-full w-full p-5 sm:p-8 md:p-10 lg:p-12 pb-20 sm:pb-24">
+    <main id="dashboard-root" class="relative z-20 flex flex-col justify-between h-full w-full p-5 sm:p-8 md:p-10 pb-20 sm:pb-24">
 
-        <!-- TOP BAR: Shabbat/Hebcal Card (Top-Left) & Weather + Metrics (Top-Right) -->
-        <header class="flex flex-col sm:flex-row justify-between items-start gap-4 w-full">
-
-            <!-- Top-Left: Hebcal / Shabbat & Holiday Times -->
-            <section id="hebcal-card" aria-live="polite" aria-label="Jewish calendar and Shabbat times" class="glass-panel rounded-2xl p-3.5 sm:p-4 max-w-xs sm:max-w-sm shadow-xl">
-                <div class="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-amber-200/90 mb-2">
-                    <span>🕯️</span>
-                    <span>Shabbat &amp; Holidays</span>
-                </div>
-                <div id="hebcal-events-list" class="space-y-1.5 text-xs sm:text-sm text-white/95">
-                    <div class="text-white/60">Loading schedule...</div>
+        <!-- TOP-LEFT: Stacked HEBCAL Schedule -->
+        <header class="flex justify-between items-start w-full">
+            <section id="hebcal-card" aria-live="polite" aria-label="Jewish calendar and Shabbat times" class="max-w-xs sm:max-w-sm">
+                <div id="hebcal-events-list" class="flex flex-col gap-2 text-xs sm:text-sm text-white/95">
+                    <div class="glass-panel rounded-xl px-3.5 py-2.5 text-white/60 shadow-lg">Loading schedule...</div>
                 </div>
             </section>
 
-            <!-- Top-Right: Current Weather, Environmental Pills & Next-Hour Rain -->
-            <section aria-live="polite" aria-label="Current weather and environmental conditions" class="flex flex-col items-start sm:items-end text-left sm:text-right text-shadow-heavy w-full sm:w-auto">
-                <!-- Offline Indicator Badge (Hidden when online) -->
-                <div id="network-offline-pill" class="hidden mb-1.5 inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-red-500/30 border border-red-400/50 text-red-100 text-xs font-semibold animate-pulse">
-                    <span class="w-2 h-2 rounded-full bg-red-400"></span>
-                    <span>Offline</span>
+            <!-- Offline Indicator Badge (Top-Right if disconnected) -->
+            <div id="network-offline-pill" class="hidden inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-red-500/30 border border-red-400/50 text-red-100 text-xs font-semibold animate-pulse">
+                <span class="w-2 h-2 rounded-full bg-red-400"></span>
+                <span>Offline</span>
+            </div>
+        </header>
+
+        <!-- CENTER HERO: [NOV / 11] + [TIME] on top row, [Weather] directly underneath -->
+        <section class="my-auto mx-auto flex flex-col items-center justify-center text-center text-shadow-heavy w-full max-w-4xl px-2">
+
+            <!-- Status Badges Row: Israel World Clock, Holiday Countdown & Active Timer -->
+            <div class="flex flex-wrap items-center justify-center gap-2 mb-2 sm:mb-3">
+                <div id="world-clock-pill" class="glass-pill px-3 py-1 rounded-full text-xs sm:text-sm font-semibold text-white flex items-center gap-1.5">
+                    <span aria-hidden="true">🇮🇱</span>
+                    <span id="world-clock-time">--:--</span>
+                </div>
+                <div id="countdown-badge" class="hidden glass-pill px-3 py-1 rounded-full text-xs sm:text-sm font-medium text-amber-200"></div>
+                <div id="timer-badge" class="hidden px-3 py-1 rounded-full bg-emerald-500/35 border border-emerald-300/50 text-emerald-100 text-xs sm:text-sm font-bold animate-pulse">
+                    ⏱️ <span id="timer-display">00:00</span>
+                </div>
+            </div>
+
+            <!-- Row 1: Stacked Month/Day on Left + Large TIME on Right -->
+            <div class="flex items-center justify-center gap-3 sm:gap-5 md:gap-6">
+                <!-- Stacked Date (NOV / 11) -->
+                <div aria-live="polite" class="flex flex-col items-center justify-center leading-none border-r border-white/25 pr-3 sm:pr-5 py-1">
+                    <span id="date-month" class="text-xl sm:text-2xl md:text-3xl font-bold uppercase tracking-widest text-amber-200/95">---</span>
+                    <span id="date-day" class="text-3xl sm:text-4xl md:text-5xl font-black tracking-tight mt-0.5">--</span>
                 </div>
 
-                <!-- Main Temperature & Icon -->
-                <div class="flex items-center sm:justify-end gap-2 sm:gap-3">
-                    <span id="weather-icon" class="text-4xl sm:text-5xl md:text-6xl" aria-hidden="true">🌡️</span>
-                    <div id="weather-temp" class="text-5xl sm:text-6xl md:text-7xl font-bold tracking-tighter">--°</div>
+                <!-- Main Digital Clock -->
+                <div aria-live="off" class="flex items-baseline gap-1.5 sm:gap-2.5">
+                    <div id="time" class="text-7xl sm:text-8xl md:text-9xl lg:text-[10rem] font-black leading-none tracking-tight">--:--</div>
+                    <div id="ampm" class="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold opacity-90"></div>
                 </div>
-                <div id="weather-desc" class="text-lg sm:text-xl md:text-2xl font-medium mt-0.5 text-white/95">Loading weather...</div>
+            </div>
 
-                <!-- Environmental Metric Pills -->
-                <div class="flex flex-wrap sm:justify-end gap-1.5 sm:gap-2 mt-2.5 max-w-md">
+            <!-- Row 2: Weather Directly Below TIME -->
+            <div aria-live="polite" aria-label="Current weather and environmental conditions" class="flex flex-col items-center mt-2 sm:mt-3 w-full">
+                <div class="flex items-center justify-center gap-2.5 sm:gap-3.5">
+                    <span id="weather-icon" class="text-3xl sm:text-4xl md:text-5xl" aria-hidden="true">🌡️</span>
+                    <span id="weather-temp" class="text-4xl sm:text-5xl md:text-6xl font-bold tracking-tight">--°</span>
+                    <span id="weather-desc" class="text-xl sm:text-2xl md:text-3xl font-medium text-white/95">Loading weather...</span>
+                </div>
+
+                <!-- Compact Environmental Metric Pills -->
+                <div class="flex flex-wrap justify-center gap-1.5 sm:gap-2 mt-3 max-w-2xl">
                     <span id="pill-feels" class="glass-pill px-2.5 py-1 rounded-full text-xs font-medium text-white/90">Feels --°</span>
                     <span id="pill-rain" class="glass-pill px-2.5 py-1 rounded-full text-xs font-medium text-sky-200">💧 --%</span>
                     <span id="pill-uv" class="glass-pill px-2.5 py-1 rounded-full text-xs font-medium text-amber-200">☀️ UV --</span>
@@ -181,37 +206,12 @@
                     </div>
                     <div id="next-hour-rain-bars" class="grid grid-cols-4 gap-1.5 items-end h-10"></div>
                 </div>
-            </section>
-        </header>
-
-        <!-- BOTTOM SECTION: Badges, Israel World Clock, Main Digital Clock & Date -->
-        <footer class="flex flex-col items-start justify-end w-full text-shadow-heavy mt-auto">
-            <!-- Status Badges Row: Israel World Clock, Holiday Countdown & Active Timer -->
-            <div class="flex flex-wrap items-center gap-2 mb-2">
-                <!-- Israel World Clock Pill (Flag + Time only) -->
-                <div id="world-clock-pill" class="glass-pill px-3 py-1 rounded-full text-xs sm:text-sm font-semibold text-white flex items-center gap-1.5">
-                    <span aria-hidden="true">🇮🇱</span>
-                    <span id="world-clock-time">--:--</span>
-                </div>
-
-                <!-- Event / Holiday Countdown Badge -->
-                <div id="countdown-badge" class="hidden glass-pill px-3 py-1 rounded-full text-xs sm:text-sm font-medium text-amber-200"></div>
-
-                <!-- Active Kitchen Timer Badge -->
-                <div id="timer-badge" class="hidden px-3 py-1 rounded-full bg-emerald-500/35 border border-emerald-300/50 text-emerald-100 text-xs sm:text-sm font-bold animate-pulse">
-                    ⏱️ <span id="timer-display">00:00</span>
-                </div>
             </div>
 
-            <!-- Main Digital Clock -->
-            <div aria-live="off" class="flex items-baseline gap-2 sm:gap-3">
-                <div id="time" class="text-7xl sm:text-8xl md:text-9xl lg:text-[10.5rem] font-black leading-none tracking-tight">--:--</div>
-                <div id="ampm" class="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold opacity-90"></div>
-            </div>
+        </section>
 
-            <!-- Date Display -->
-            <div id="date" aria-live="polite" class="text-lg sm:text-2xl md:text-3xl font-medium mt-1.5 text-gray-100/95 pl-1">---</div>
-        </footer>
+        <!-- Bottom Spacer to keep Center Hero balanced above the fixed bottom-right Timers dock -->
+        <div class="h-4 sm:h-6 pointer-events-none"></div>
 
     </main>
 
@@ -246,7 +246,7 @@
                 ENABLED: true,
                 CANDLE_LIGHTING_MINS: 18,
                 HAVDALAH_MINS: 50,
-                MAX_ITEMS: 3
+                MAX_ITEMS: 4
             },
 
             // 5. Auto Night Mode & Burn-In Protection
@@ -336,7 +336,8 @@
             // Clock, World Clock & Badges
             time: document.getElementById('time'),
             ampm: document.getElementById('ampm'),
-            date: document.getElementById('date'),
+            dateMonth: document.getElementById('date-month'),
+            dateDay: document.getElementById('date-day'),
             worldClockPill: document.getElementById('world-clock-pill'),
             worldClockTime: document.getElementById('world-clock-time'),
             countdownBadge: document.getElementById('countdown-badge'),
@@ -354,9 +355,12 @@
         /* ==========================================================================
            DATE & TIME FORMATTERS
            ========================================================================== */
-        const dateFormatter = new Intl.DateTimeFormat(CONFIG.LOCALE, {
-            weekday: 'long',
-            month: 'long',
+        const monthFormatter = new Intl.DateTimeFormat(CONFIG.LOCALE, {
+            month: 'short',
+            timeZone: CONFIG.TIMEZONE
+        });
+
+        const dayFormatter = new Intl.DateTimeFormat(CONFIG.LOCALE, {
             day: 'numeric',
             timeZone: CONFIG.TIMEZONE
         });
@@ -388,7 +392,8 @@
                 DOM.ampm.textContent = ampm;
             }
 
-            DOM.date.textContent = dateFormatter.format(now);
+            DOM.dateMonth.textContent = monthFormatter.format(now).toUpperCase();
+            DOM.dateDay.textContent = dayFormatter.format(now);
 
             // Secondary World Clock (Israel Flag + Time)
             if (CONFIG.WORLD_CLOCK.ENABLED) {
@@ -701,14 +706,14 @@
 
         function renderHebcalEvents(items) {
             if (!items || items.length === 0) {
-                DOM.hebcalEventsList.innerHTML = `<div class="text-white/70">No upcoming events</div>`;
+                DOM.hebcalEventsList.innerHTML = `<div class="glass-panel rounded-xl px-3.5 py-2.5 text-white/70 shadow-lg">No upcoming events</div>`;
                 return;
             }
 
             DOM.hebcalEventsList.innerHTML = items.slice(0, CONFIG.HEBCAL.MAX_ITEMS).map(ev => `
-                <div class="flex flex-col leading-tight">
+                <div class="glass-panel rounded-xl px-3.5 py-2.5 shadow-lg flex flex-col leading-tight">
                     <span class="font-semibold text-white">${ev.title}</span>
-                    ${ev.sub ? `<span class="text-[11px] text-white/70">${ev.sub}</span>` : ''}
+                    ${ev.sub ? `<span class="text-[11px] text-white/70 mt-0.5">${ev.sub}</span>` : ''}
                 </div>
             `).join('');
         }
