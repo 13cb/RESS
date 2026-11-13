@@ -153,18 +153,6 @@
         <!-- CENTER HERO: [NOV / 11] + [TIME] on top row, [Weather] directly underneath -->
         <section class="my-auto mx-auto flex flex-col items-center justify-center text-center text-shadow-heavy w-full max-w-4xl px-2">
 
-            <!-- Status Badges Row: Israel World Clock, Holiday Countdown & Active Timer -->
-            <div class="flex flex-wrap items-center justify-center gap-2 mb-2 sm:mb-3">
-                <div id="world-clock-pill" class="glass-pill px-3 py-1 rounded-full text-xs sm:text-sm font-semibold text-white flex items-center gap-1.5">
-                    <span aria-hidden="true">🇮🇱</span>
-                    <span id="world-clock-time">--:--</span>
-                </div>
-                <div id="countdown-badge" class="hidden glass-pill px-3 py-1 rounded-full text-xs sm:text-sm font-medium text-amber-200"></div>
-                <div id="timer-badge" class="hidden px-3 py-1 rounded-full bg-emerald-500/35 border border-emerald-300/50 text-emerald-100 text-xs sm:text-sm font-bold animate-pulse">
-                    ⏱️ <span id="timer-display">00:00</span>
-                </div>
-            </div>
-
             <!-- Row 1: Stacked Month/Day on Left + Large TIME on Right -->
             <div class="flex items-center justify-center gap-3 sm:gap-5 md:gap-6">
                 <!-- Stacked Date (NOV / 11) -->
@@ -195,16 +183,6 @@
                     <span id="pill-uv" class="glass-pill px-2.5 py-1 rounded-full text-xs font-medium text-amber-200">☀️ UV --</span>
                     <span id="pill-aqi" class="glass-pill px-2.5 py-1 rounded-full text-xs font-medium text-emerald-200">🍃 AQI --</span>
                     <span id="pill-sun" class="glass-pill px-2.5 py-1 rounded-full text-xs font-medium text-orange-200">🌅 --:--</span>
-                    <span id="pill-moon" class="glass-pill px-2.5 py-1 rounded-full text-xs font-medium text-indigo-200">🌓 --</span>
-                </div>
-
-                <!-- Next-Hour Rain Timeline (Automatically appears when precipitation is expected in next 60m) -->
-                <div id="next-hour-rain-box" class="hidden glass-panel rounded-xl p-2.5 mt-2.5 w-full max-w-xs text-left">
-                    <div class="flex items-center justify-between text-[11px] font-semibold uppercase tracking-wider text-sky-200 mb-1.5">
-                        <span>🌧️ Next 60 Min Rain</span>
-                        <span id="next-hour-rain-label">Expected</span>
-                    </div>
-                    <div id="next-hour-rain-bars" class="grid grid-cols-4 gap-1.5 items-end h-10"></div>
                 </div>
             </div>
 
@@ -326,10 +304,6 @@
             pillUv: document.getElementById('pill-uv'),
             pillAqi: document.getElementById('pill-aqi'),
             pillSun: document.getElementById('pill-sun'),
-            pillMoon: document.getElementById('pill-moon'),
-            nextHourRainBox: document.getElementById('next-hour-rain-box'),
-            nextHourRainLabel: document.getElementById('next-hour-rain-label'),
-            nextHourRainBars: document.getElementById('next-hour-rain-bars'),
             // Hebcal Calendar
             hebcalCard: document.getElementById('hebcal-card'),
             hebcalEventsList: document.getElementById('hebcal-events-list'),
@@ -338,11 +312,6 @@
             ampm: document.getElementById('ampm'),
             dateMonth: document.getElementById('date-month'),
             dateDay: document.getElementById('date-day'),
-            worldClockPill: document.getElementById('world-clock-pill'),
-            worldClockTime: document.getElementById('world-clock-time'),
-            countdownBadge: document.getElementById('countdown-badge'),
-            timerBadge: document.getElementById('timer-badge'),
-            timerDisplay: document.getElementById('timer-display'),
             // Dock Controls
             btnCancelTimer: document.getElementById('btn-cancel-timer'),
             btnAmbientSound: document.getElementById('btn-ambient-sound'),
@@ -365,15 +334,8 @@
             timeZone: CONFIG.TIMEZONE
         });
 
-        const israelTimeFormatter = new Intl.DateTimeFormat(CONFIG.LOCALE, {
-            hour: 'numeric',
-            minute: '2-digit',
-            hour12: !CONFIG.USE_24_HOUR,
-            timeZone: CONFIG.WORLD_CLOCK.TIMEZONE
-        });
-
         /* ==========================================================================
-           CLOCK, WORLD CLOCK, COUNTDOWN & NIGHT MODE
+           CLOCK, COUNTDOWN & NIGHT MODE
            ========================================================================== */
         function updateClock() {
             const now = new Date();
@@ -395,17 +357,7 @@
             DOM.dateMonth.textContent = monthFormatter.format(now).toUpperCase();
             DOM.dateDay.textContent = dayFormatter.format(now);
 
-            // Secondary World Clock (Israel Flag + Time)
-            if (CONFIG.WORLD_CLOCK.ENABLED) {
-                DOM.worldClockPill.classList.remove('hidden');
-                DOM.worldClockTime.textContent = israelTimeFormatter.format(now);
-            } else {
-                DOM.worldClockPill.classList.add('hidden');
-            }
-
             updateNightMode(now);
-            updateEventCountdown(now);
-            updateMoonPhase(now);
         }
 
         function updateNightMode(now = new Date()) {
@@ -427,57 +379,6 @@
 
             DOM.nightOverlay.style.opacity = isNight ? '1' : '0';
             DOM.btnToggleNight.textContent = isNight ? '☀️ Day' : '🌙 Night';
-        }
-
-        function updateEventCountdown(now) {
-            if (!CONFIG.EVENTS || CONFIG.EVENTS.length === 0) {
-                DOM.countdownBadge.classList.add('hidden');
-                return;
-            }
-
-            const todayMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-            let nearest = null;
-
-            for (const ev of CONFIG.EVENTS) {
-                let target = new Date(now.getFullYear(), ev.MONTH - 1, ev.DAY);
-                if (target < todayMidnight) {
-                    target = new Date(now.getFullYear() + 1, ev.MONTH - 1, ev.DAY);
-                }
-                const diffDays = Math.round((target - todayMidnight) / (1000 * 60 * 60 * 24));
-                if (!nearest || diffDays < nearest.days) {
-                    nearest = { name: ev.NAME, days: diffDays };
-                }
-            }
-
-            if (nearest) {
-                DOM.countdownBadge.classList.remove('hidden');
-                DOM.countdownBadge.textContent = nearest.days === 0
-                    ? `🎉 Today: ${nearest.name}`
-                    : `✨ ${nearest.name} in ${nearest.days}d`;
-            }
-        }
-
-        function updateMoonPhase(date) {
-            // Synodic lunar cycle calculation (~29.53058867 days)
-            const synodicMonth = 29.53058867;
-            const knownNewMoon = new Date('2000-01-06T18:14:00Z').getTime();
-            const daysSince = (date.getTime() - knownNewMoon) / 86400000;
-            const cyclePos = ((daysSince % synodicMonth) + synodicMonth) % synodicMonth;
-            const phaseRatio = cyclePos / synodicMonth;
-            const illumination = Math.round((1 - Math.cos(phaseRatio * 2 * Math.PI)) * 50);
-
-            let icon = '🌑';
-            let label = 'New Moon';
-            if (phaseRatio < 0.0625 || phaseRatio >= 0.9375) { icon = '🌑'; label = 'New'; }
-            else if (phaseRatio < 0.1875) { icon = '🌒'; label = 'Wax Cres'; }
-            else if (phaseRatio < 0.3125) { icon = '🌓'; label = '1st Qtr'; }
-            else if (phaseRatio < 0.4375) { icon = '🌔'; label = 'Wax Gib'; }
-            else if (phaseRatio < 0.5625) { icon = '🌕'; label = 'Full'; }
-            else if (phaseRatio < 0.6875) { icon = '🌖'; label = 'Wan Gib'; }
-            else if (phaseRatio < 0.8125) { icon = '🌗'; label = '3rd Qtr'; }
-            else { icon = '🌘'; label = 'Wan Cres'; }
-
-            DOM.pillMoon.textContent = `${icon} ${label} (${illumination}%)`;
         }
 
         /* ==========================================================================
@@ -609,58 +510,16 @@
                 }
             }
 
-            // Next-Hour Rain Timeline (from minutely_15)
-            renderNextHourRain(weatherData.minutely_15);
-
             // Dynamic Wallpaper
             const bgUrl = selectWeatherBackground(cur.weather_code, Boolean(cur.is_day));
             setBackgroundImage(bgUrl);
-        }
-
-        function renderNextHourRain(minutely15) {
-            if (!minutely15 || !minutely15.time || !minutely15.precipitation_probability) {
-                DOM.nextHourRainBox.classList.add('hidden');
-                return;
-            }
-
-            const nowMs = Date.now();
-            let startIndex = minutely15.time.findIndex(t => new Date(t).getTime() >= nowMs - 15 * 60 * 1000);
-            if (startIndex < 0) startIndex = 0;
-
-            const sliceProbs = minutely15.precipitation_probability.slice(startIndex, startIndex + 4);
-            const sliceTimes = minutely15.time.slice(startIndex, startIndex + 4);
-            const maxProb = Math.max(...sliceProbs, 0);
-
-            if (maxProb < 20 || sliceProbs.length === 0) {
-                DOM.nextHourRainBox.classList.add('hidden');
-                return;
-            }
-
-            DOM.nextHourRainBox.classList.remove('hidden');
-            DOM.nextHourRainLabel.textContent = `Peak ${maxProb}%`;
-
-            let barsHtml = '';
-            sliceProbs.forEach((prob, idx) => {
-                const heightPct = Math.max(15, prob);
-                const tDate = new Date(sliceTimes[idx]);
-                const minsLabel = idx === 0 ? 'Now' : `+${idx * 15}m`;
-                barsHtml += `
-                    <div class="flex flex-col items-center gap-1 h-full justify-end">
-                        <div class="w-full bg-white/10 rounded-t-md h-6 flex items-end overflow-hidden">
-                            <div class="w-full bg-sky-400 rounded-t-md transition-all" style="height: ${heightPct}%"></div>
-                        </div>
-                        <span class="text-[10px] text-white/75">${minsLabel}</span>
-                    </div>
-                `;
-            });
-            DOM.nextHourRainBars.innerHTML = barsHtml;
         }
 
         async function fetchWeatherAndEnv() {
             const loc = CONFIG.LOCATION;
             const cacheKey = `${CONFIG.STORAGE_KEY}_${loc.LAT}_${loc.LON}_${CONFIG.TEMP_UNIT}`;
 
-            const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${loc.LAT}&longitude=${loc.LON}&current=temperature_2m,apparent_temperature,is_day,weather_code&minutely_15=precipitation_probability,precipitation&daily=sunrise,sunset,uv_index_max,precipitation_probability_max&temperature_unit=${CONFIG.TEMP_UNIT}&wind_speed_unit=${CONFIG.WIND_UNIT}&timezone=auto&forecast_days=1`;
+            const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${loc.LAT}&longitude=${loc.LON}&current=temperature_2m,apparent_temperature,is_day,weather_code&daily=sunrise,sunset,uv_index_max,precipitation_probability_max&temperature_unit=${CONFIG.TEMP_UNIT}&wind_speed_unit=${CONFIG.WIND_UNIT}&timezone=auto&forecast_days=1`;
             const aqiUrl = `https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${loc.LAT}&longitude=${loc.LON}&current=us_aqi`;
 
             try {
@@ -791,7 +650,6 @@
         function startTimer(minutes) {
             stopTimer();
             state.timerEndTime = Date.now() + minutes * 60 * 1000;
-            DOM.timerBadge.classList.remove('hidden');
             DOM.btnCancelTimer.classList.remove('hidden');
 
             const tick = () => {
@@ -804,7 +662,7 @@
                 const totalSec = Math.ceil(remainingMs / 1000);
                 const m = Math.floor(totalSec / 60).toString().padStart(2, '0');
                 const s = (totalSec % 60).toString().padStart(2, '0');
-                DOM.timerDisplay.textContent = `${m}:${s}`;
+                DOM.btnCancelTimer.textContent = `✕ ${m}:${s}`;
             };
 
             tick();
@@ -817,8 +675,8 @@
                 state.timerInterval = null;
             }
             state.timerEndTime = null;
-            DOM.timerBadge.classList.add('hidden');
             DOM.btnCancelTimer.classList.add('hidden');
+            DOM.btnCancelTimer.textContent = '✕ Stop';
         }
 
         async function cycleAmbientSound() {
