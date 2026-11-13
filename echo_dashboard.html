@@ -12,7 +12,6 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
 
     <style>
-        /* @import placed first before any CSS rules */
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&display=swap');
 
         :root {
@@ -29,12 +28,10 @@
             touch-action: manipulation;
         }
 
-        /* High-contrast shadow for readability over dynamic photography */
         .text-shadow-heavy {
             text-shadow: 0 4px 14px rgba(0, 0, 0, 0.75), 0 0 36px rgba(0, 0, 0, 0.55);
         }
 
-        /* Glassmorphic panel styling */
         .glass-panel {
             background: rgba(15, 23, 42, 0.48);
             backdrop-filter: blur(16px);
@@ -51,7 +48,6 @@
             box-shadow: 0 6px 20px -4px rgba(0, 0, 0, 0.4), inset 0 1px 0 0 rgba(255, 255, 255, 0.1);
         }
 
-        /* Dual-layer cross-fading background canvases */
         .bg-layer {
             position: absolute;
             inset: 0;
@@ -62,20 +58,17 @@
             will-change: opacity;
         }
 
-        /* Smooth OLED/LCD burn-in pixel shift transition */
         #dashboard-root {
             transition: transform 2.5s ease-in-out;
             will-change: transform;
         }
 
-        /* Night mode dimming & warm amber tint */
         #night-overlay {
             background: radial-gradient(circle at center, rgba(15, 8, 0, 0.55) 0%, rgba(0, 0, 0, 0.85) 100%);
             transition: opacity 1.5s ease-in-out;
             pointer-events: none;
         }
 
-        /* Always-visible subtle bottom-right control dock */
         #control-dock {
             opacity: 0.85;
             transition: opacity 0.25s ease, transform 0.25s ease;
@@ -85,7 +78,6 @@
             opacity: 1;
         }
 
-        /* Respect OS Reduced Motion preference */
         @media (prefers-reduced-motion: reduce) {
             *, *::before, *::after {
                 animation-duration: 0.01ms !important;
@@ -101,22 +93,19 @@
     <div id="bg-layer-1" class="bg-layer z-0 opacity-100"></div>
     <div id="bg-layer-2" class="bg-layer z-0 opacity-0"></div>
 
-    <!-- Ambient Contrast Gradient Overlay -->
+    <!-- Ambient Contrast & Auto Night Mode Overlays -->
     <div class="absolute inset-0 bg-gradient-to-b from-black/45 via-black/15 to-black/75 z-10 pointer-events-none"></div>
-
-    <!-- Auto Night Mode Dimming Layer -->
     <div id="night-overlay" class="absolute inset-0 z-30 opacity-0"></div>
 
-    <!-- Full-Screen Blackout Sleep Overlay (Double-Tap or Dock Button to toggle) -->
+    <!-- Full-Screen Blackout Sleep Overlay -->
     <div id="blackout-overlay" class="hidden fixed inset-0 bg-black z-50 cursor-pointer flex items-center justify-center">
         <span class="text-white/20 text-xs uppercase tracking-widest select-none">Tap anywhere to wake</span>
     </div>
 
-    <!-- Always-Present Bottom-Center Touch Control Dock (TIMERS & Controls) -->
+    <!-- Bottom-Center Touch Control Dock -->
     <div id="control-dock" class="fixed bottom-4 sm:bottom-6 left-1/2 -translate-x-1/2 z-40 w-max max-w-[95vw]">
         <div class="glass-panel rounded-2xl p-2 sm:p-2.5 flex flex-wrap justify-center items-center gap-1.5 shadow-2xl text-xs sm:text-sm font-medium">
             <span class="text-[11px] font-bold uppercase tracking-wider text-white/60 px-1.5 hidden sm:inline">Timers</span>
-            <!-- Quick Kitchen Timers -->
             <button type="button" data-timer="5" class="timer-btn px-2.5 py-1.5 rounded-xl bg-white/10 hover:bg-white/25 active:scale-95 transition">⏱️ 5m</button>
             <button type="button" data-timer="10" class="timer-btn px-2.5 py-1.5 rounded-xl bg-white/10 hover:bg-white/25 active:scale-95 transition">10m</button>
             <button type="button" data-timer="15" class="timer-btn px-2.5 py-1.5 rounded-xl bg-white/10 hover:bg-white/25 active:scale-95 transition">15m</button>
@@ -125,7 +114,6 @@
 
             <div class="h-4 w-px bg-white/20 mx-0.5"></div>
 
-            <!-- Display & Audio Actions -->
             <button type="button" id="btn-ambient-sound" class="px-2.5 py-1.5 rounded-xl bg-white/10 hover:bg-white/25 active:scale-95 transition" title="Ambient Soundscape">🎧 Off</button>
             <button type="button" id="btn-cycle-bg" class="px-2.5 py-1.5 rounded-xl bg-white/10 hover:bg-white/25 active:scale-95 transition" title="Cycle Wallpaper">🖼️ BG</button>
             <button type="button" id="btn-toggle-night" class="px-2.5 py-1.5 rounded-xl bg-white/10 hover:bg-white/25 active:scale-95 transition" title="Toggle Night Dimming">🌙 Night</button>
@@ -134,10 +122,10 @@
         </div>
     </div>
 
-    <!-- Main Dashboard Container (Shifts subtly to prevent OLED/LCD burn-in) -->
+    <!-- Main Dashboard Container -->
     <main id="dashboard-root" class="relative z-20 h-full w-full p-5 sm:p-8 md:p-10">
 
-        <!-- TOP-LEFT: Stacked HEBCAL Schedule -->
+        <!-- Top Header: Hebcal Schedule (Left) & Offline Badge (Right) -->
         <header class="relative z-30 flex justify-between items-start w-full pointer-events-none">
             <section id="hebcal-card" aria-live="polite" aria-label="Jewish calendar and Shabbat times" class="max-w-xs sm:max-w-sm pointer-events-auto">
                 <div id="hebcal-events-list" class="flex flex-col gap-2 text-xs sm:text-sm text-white/95">
@@ -145,33 +133,30 @@
                 </div>
             </section>
 
-            <!-- Offline Indicator Badge (Top-Right if disconnected) -->
             <div id="network-offline-pill" class="hidden pointer-events-auto inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-red-500/30 border border-red-400/50 text-red-100 text-xs font-semibold animate-pulse">
                 <span class="w-2 h-2 rounded-full bg-red-400"></span>
                 <span>Offline</span>
             </div>
         </header>
 
-        <!-- TRUE VERTICALLY & HORIZONTALLY CENTERED HERO: [NOV / 11] + [TIME] on top row, [Weather Pills] underneath -->
+        <!-- Centered Hero: Date, Clock & Weather -->
         <section class="fixed inset-0 z-20 flex flex-col items-center justify-center text-center text-shadow-heavy px-4 pointer-events-none">
             <div class="flex flex-col items-center justify-center w-full max-w-4xl gap-4 sm:gap-5">
 
-                <!-- Row 1: Stacked Month/Day on Left + Large TIME on Right -->
+                <!-- Stacked Date & Digital Clock -->
                 <div class="flex items-center justify-center gap-3.5 sm:gap-5 md:gap-6">
-                    <!-- Stacked Date (NOV / 11) -->
                     <div aria-live="polite" class="flex flex-col items-center justify-center leading-none border-r border-white/25 pr-3.5 sm:pr-5 py-1">
                         <span id="date-month" class="text-xl sm:text-2xl md:text-3xl font-bold uppercase tracking-widest text-amber-200/95">---</span>
                         <span id="date-day" class="text-3xl sm:text-4xl md:text-5xl font-black tracking-tight tabular-nums mt-0.5">--</span>
                     </div>
 
-                    <!-- Main Digital Clock -->
                     <div aria-live="off" class="flex items-baseline gap-1.5 sm:gap-2.5">
                         <div id="time" class="text-7xl sm:text-8xl md:text-9xl lg:text-[10rem] font-black leading-none tracking-tight tabular-nums">--:--</div>
                         <div id="ampm" class="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold opacity-90"></div>
                     </div>
                 </div>
 
-                <!-- Row 2: Weather Directly Below TIME -->
+                <!-- Unified Weather Pill & Environmental Metric Pills -->
                 <div aria-live="polite" aria-label="Current weather and environmental conditions" class="flex flex-col items-center gap-3.5 sm:gap-4 w-full">
                     <div class="glass-pill inline-flex items-center justify-center gap-2.5 sm:gap-3 px-4 py-1.5 sm:px-5 sm:py-2 rounded-full">
                         <span id="weather-icon" class="text-2xl sm:text-3xl md:text-4xl" aria-hidden="true">🌡️</span>
@@ -180,7 +165,6 @@
                         <span id="weather-desc" class="text-base sm:text-xl md:text-2xl font-medium text-white/95">Loading weather...</span>
                     </div>
 
-                    <!-- Compact Environmental Metric Pills -->
                     <div class="flex flex-wrap justify-center gap-1.5 sm:gap-2 max-w-2xl">
                         <span id="pill-feels" class="glass-pill px-3 py-1 rounded-full text-xs font-medium text-white/90 tabular-nums">Feels --°</span>
                         <span id="pill-rain" class="glass-pill px-3 py-1 rounded-full text-xs font-medium text-sky-200 tabular-nums">💧 --%</span>
@@ -197,31 +181,19 @@
 
     <script>
         /* ==========================================================================
-           MASTER CONFIGURATION (Edit all customizable settings right here)
+           MASTER CONFIGURATION
            ========================================================================== */
         const CONFIG = {
-            // 1. Primary Location & Weather Units
             LOCATION: {
                 NAME: 'Teaneck, NJ',
                 LAT: 40.8976,
                 LON: -74.0154
             },
             TEMP_UNIT: 'fahrenheit',          // 'fahrenheit' or 'celsius'
-            WIND_UNIT: 'mph',                 // 'mph', 'kmh', 'ms', or 'kn'
-
-            // 2. Clock & Locale Settings
             LOCALE: 'en-US',
             TIMEZONE: undefined,              // Leave undefined for system local timezone
             USE_24_HOUR: false,               // false = 12-hour (AM/PM), true = 24-hour
 
-            // 3. Secondary World Clock (Israel)
-            WORLD_CLOCK: {
-                ENABLED: true,
-                FLAG: '🇮🇱',
-                TIMEZONE: 'Asia/Jerusalem'
-            },
-
-            // 4. Hebcal Shabbat & Jewish Holiday Times
             HEBCAL: {
                 ENABLED: true,
                 CANDLE_LIGHTING_MINS: 18,
@@ -229,38 +201,28 @@
                 MAX_ITEMS: 4
             },
 
-            // 5. Auto Night Mode & Burn-In Protection
             NIGHT_MODE: {
                 ENABLED: true,
                 START_HOUR: 22,               // 10:00 PM
                 END_HOUR: 6                   // 6:00 AM
             },
+
             PIXEL_SHIFT: {
                 ENABLED: true,
                 MAX_OFFSET_PX: 4,
-                INTERVAL_MS: 15 * 60 * 1000   // Shift gently every 15 minutes
+                INTERVAL_MS: 15 * 60 * 1000
             },
 
-            // 6. Refresh Intervals & Caching
             CLOCK_INTERVAL_MS: 1000,
             WEATHER_INTERVAL_MS: 10 * 60 * 1000,
             FETCH_TIMEOUT_MS: 8000,
             STORAGE_KEY: 'echo_dashboard_cache_v4',
 
-            // 7. Upcoming Event Countdowns (Month is 1-12)
-            EVENTS: [
-                { NAME: 'Hanukkah', MONTH: 12, DAY: 4 },
-                { NAME: 'New Year', MONTH: 1, DAY: 1 },
-                { NAME: 'Passover', MONTH: 4, DAY: 21 }
-            ],
-
-            // 8. Ambient Soundscape Volumes (dB)
             SOUND: {
                 VOLUME_DB: -18,
                 CHIME_VOLUME_DB: -10
             },
 
-            // 9. Dynamic Weather & Time-of-Day Wallpapers
             BACKGROUNDS: {
                 CLEAR_DAY: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1920&q=80',
                 CLEAR_NIGHT: 'https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&w=1920&q=80',
@@ -274,20 +236,19 @@
         };
 
         /* ==========================================================================
-           APPLICATION STATE & DOM CACHE
+           STATE & DOM REFERENCES
            ========================================================================== */
         const state = {
-            manualNightOverride: null, // null = auto schedule, true/false = manual override
+            manualNightOverride: null,
             manualBgIndex: -1,
             activeBgLayer: 1,
             currentBgUrl: '',
             isBlackout: false,
-            ambientIndex: 0, // 0 = Off, 1 = Brown Noise, 2 = Soft Rain, 3 = White Noise
+            ambientIndex: 0,
             ambientNode: null,
             ambientGain: null,
             timerEndTime: null,
-            timerInterval: null,
-            wakeLock: null
+            timerInterval: null
         };
 
         const DOM = {
@@ -296,7 +257,6 @@
             blackoutOverlay: document.getElementById('blackout-overlay'),
             bgLayer1: document.getElementById('bg-layer-1'),
             bgLayer2: document.getElementById('bg-layer-2'),
-            // Weather & Environment
             networkOfflinePill: document.getElementById('network-offline-pill'),
             weatherIcon: document.getElementById('weather-icon'),
             weatherTemp: document.getElementById('weather-temp'),
@@ -306,15 +266,12 @@
             pillUv: document.getElementById('pill-uv'),
             pillAqi: document.getElementById('pill-aqi'),
             pillSun: document.getElementById('pill-sun'),
-            // Hebcal Calendar
             hebcalCard: document.getElementById('hebcal-card'),
             hebcalEventsList: document.getElementById('hebcal-events-list'),
-            // Clock, World Clock & Badges
             time: document.getElementById('time'),
             ampm: document.getElementById('ampm'),
             dateMonth: document.getElementById('date-month'),
             dateDay: document.getElementById('date-day'),
-            // Dock Controls
             btnCancelTimer: document.getElementById('btn-cancel-timer'),
             btnAmbientSound: document.getElementById('btn-ambient-sound'),
             btnCycleBg: document.getElementById('btn-cycle-bg'),
@@ -324,26 +281,14 @@
             refreshIcon: document.getElementById('refresh-icon')
         };
 
-        /* ==========================================================================
-           DATE & TIME FORMATTERS
-           ========================================================================== */
-        const monthFormatter = new Intl.DateTimeFormat(CONFIG.LOCALE, {
-            month: 'short',
-            timeZone: CONFIG.TIMEZONE
-        });
-
-        const dayFormatter = new Intl.DateTimeFormat(CONFIG.LOCALE, {
-            day: 'numeric',
-            timeZone: CONFIG.TIMEZONE
-        });
+        const monthFormatter = new Intl.DateTimeFormat(CONFIG.LOCALE, { month: 'short', timeZone: CONFIG.TIMEZONE });
+        const dayFormatter = new Intl.DateTimeFormat(CONFIG.LOCALE, { day: 'numeric', timeZone: CONFIG.TIMEZONE });
 
         /* ==========================================================================
-           CLOCK, COUNTDOWN & NIGHT MODE
+           CLOCK & NIGHT MODE
            ========================================================================== */
         function updateClock() {
             const now = new Date();
-
-            // Main Local Clock
             let hours = now.getHours();
             const minutes = now.getMinutes().toString().padStart(2, '0');
 
@@ -359,7 +304,6 @@
 
             DOM.dateMonth.textContent = monthFormatter.format(now).toUpperCase();
             DOM.dateDay.textContent = dayFormatter.format(now);
-
             updateNightMode(now);
         }
 
@@ -385,7 +329,7 @@
         }
 
         /* ==========================================================================
-           DYNAMIC WALLPAPER ENGINE (Preloaded Cross-Fade)
+           DYNAMIC WALLPAPER ENGINE
            ========================================================================== */
         function selectWeatherBackground(code, isDay) {
             if (state.manualBgIndex >= 0) {
@@ -408,17 +352,13 @@
             const preloader = new Image();
             preloader.onload = () => {
                 state.currentBgUrl = url;
-                if (state.activeBgLayer === 1) {
-                    DOM.bgLayer2.style.backgroundImage = `url("${url}")`;
-                    DOM.bgLayer2.style.opacity = '1';
-                    DOM.bgLayer1.style.opacity = '0';
-                    state.activeBgLayer = 2;
-                } else {
-                    DOM.bgLayer1.style.backgroundImage = `url("${url}")`;
-                    DOM.bgLayer1.style.opacity = '1';
-                    DOM.bgLayer2.style.opacity = '0';
-                    state.activeBgLayer = 1;
-                }
+                const incoming = state.activeBgLayer === 1 ? DOM.bgLayer2 : DOM.bgLayer1;
+                const outgoing = state.activeBgLayer === 1 ? DOM.bgLayer1 : DOM.bgLayer2;
+
+                incoming.style.backgroundImage = `url("${url}")`;
+                incoming.style.opacity = '1';
+                outgoing.style.opacity = '0';
+                state.activeBgLayer = state.activeBgLayer === 1 ? 2 : 1;
             };
             preloader.onerror = () => {
                 if (url !== CONFIG.BACKGROUNDS.FALLBACK) {
@@ -429,35 +369,32 @@
         }
 
         /* ==========================================================================
-           WEATHER, AIR QUALITY & NEXT-HOUR RAIN FETCHING
+           WEATHER & AIR QUALITY
            ========================================================================== */
-        function getWeatherMeta(code) {
-            const map = {
-                0:  { text: 'Clear Sky', icon: '☀️' },
-                1:  { text: 'Mainly Clear', icon: '🌤️' },
-                2:  { text: 'Partly Cloudy', icon: '⛅' },
-                3:  { text: 'Overcast', icon: '☁️' },
-                45: { text: 'Foggy', icon: '🌫️' },
-                48: { text: 'Rime Fog', icon: '🌫️' },
-                51: { text: 'Light Drizzle', icon: '🌧️' },
-                53: { text: 'Drizzle', icon: '🌧️' },
-                55: { text: 'Dense Drizzle', icon: '🌧️' },
-                61: { text: 'Light Rain', icon: '🌧️' },
-                63: { text: 'Moderate Rain', icon: '🌧️' },
-                65: { text: 'Heavy Rain', icon: '🌧️' },
-                71: { text: 'Light Snow', icon: '❄️' },
-                73: { text: 'Snowfall', icon: '❄️' },
-                75: { text: 'Heavy Snow', icon: '❄️' },
-                77: { text: 'Snow Grains', icon: '❄️' },
-                80: { text: 'Rain Showers', icon: '🌦️' },
-                81: { text: 'Moderate Showers', icon: '🌦️' },
-                82: { text: 'Violent Showers', icon: '⛈️' },
-                95: { text: 'Thunderstorm', icon: '⛈️' },
-                96: { text: 'Storm & Hail', icon: '⛈️' },
-                99: { text: 'Heavy Storm', icon: '⛈️' }
-            };
-            return map[code] || { text: 'Clear', icon: '🌡️' };
-        }
+        const WEATHER_CODES = {
+            0:  { text: 'Clear Sky', icon: '☀️' },
+            1:  { text: 'Mainly Clear', icon: '🌤️' },
+            2:  { text: 'Partly Cloudy', icon: '⛅' },
+            3:  { text: 'Overcast', icon: '☁️' },
+            45: { text: 'Foggy', icon: '🌫️' },
+            48: { text: 'Rime Fog', icon: '🌫️' },
+            51: { text: 'Light Drizzle', icon: '🌧️' },
+            53: { text: 'Drizzle', icon: '🌧️' },
+            55: { text: 'Dense Drizzle', icon: '🌧️' },
+            61: { text: 'Light Rain', icon: '🌧️' },
+            63: { text: 'Moderate Rain', icon: '🌧️' },
+            65: { text: 'Heavy Rain', icon: '🌧️' },
+            71: { text: 'Light Snow', icon: '❄️' },
+            73: { text: 'Snowfall', icon: '❄️' },
+            75: { text: 'Heavy Snow', icon: '❄️' },
+            77: { text: 'Snow Grains', icon: '❄️' },
+            80: { text: 'Rain Showers', icon: '🌦️' },
+            81: { text: 'Moderate Showers', icon: '🌦️' },
+            82: { text: 'Violent Showers', icon: '⛈️' },
+            95: { text: 'Thunderstorm', icon: '⛈️' },
+            96: { text: 'Storm & Hail', icon: '⛈️' },
+            99: { text: 'Heavy Storm', icon: '⛈️' }
+        };
 
         async function fetchWithTimeout(url, timeoutMs = CONFIG.FETCH_TIMEOUT_MS) {
             const controller = new AbortController();
@@ -472,28 +409,26 @@
         }
 
         function renderWeather(weatherData, aqiData, isCached = false) {
-            if (!weatherData || !weatherData.current) return;
+            if (!weatherData?.current) return;
 
             const cur = weatherData.current;
             const daily = weatherData.daily || {};
-            const meta = getWeatherMeta(cur.weather_code);
+            const meta = WEATHER_CODES[cur.weather_code] || { text: 'Clear', icon: '🌡️' };
 
             DOM.weatherIcon.textContent = meta.icon;
             DOM.weatherTemp.textContent = `${Math.round(cur.temperature_2m)}°`;
             DOM.weatherDesc.textContent = isCached ? `${meta.text} (Cached)` : meta.text;
 
-            // Pills
             const feels = cur.apparent_temperature !== undefined ? Math.round(cur.apparent_temperature) : '--';
-            const rainProb = daily.precipitation_probability_max ? daily.precipitation_probability_max[0] : '--';
-            const uvMax = daily.uv_index_max ? Math.round(daily.uv_index_max[0]) : '--';
-            const usAqi = aqiData && aqiData.current ? Math.round(aqiData.current.us_aqi) : '--';
+            const rainProb = daily.precipitation_probability_max?.[0] ?? '--';
+            const uvMax = daily.uv_index_max?.[0] !== undefined ? Math.round(daily.uv_index_max[0]) : '--';
+            const usAqi = aqiData?.current?.us_aqi !== undefined ? Math.round(aqiData.current.us_aqi) : '--';
 
             DOM.pillFeels.textContent = `Feels ${feels}°`;
             DOM.pillRain.textContent = `💧 ${rainProb}%`;
             DOM.pillUv.textContent = `☀️ UV ${uvMax}`;
             DOM.pillAqi.textContent = `🍃 AQI ${usAqi}`;
 
-            // Next Sunrise or Sunset
             if (daily.sunrise && daily.sunset) {
                 const now = new Date();
                 const sunrise = new Date(daily.sunrise[0]);
@@ -504,26 +439,20 @@
                     hour12: !CONFIG.USE_24_HOUR
                 });
 
-                if (now < sunrise) {
-                    DOM.pillSun.textContent = `🌅 ${fmt.format(sunrise)}`;
-                } else if (now < sunset) {
-                    DOM.pillSun.textContent = `🌇 ${fmt.format(sunset)}`;
-                } else {
-                    DOM.pillSun.textContent = `🌅 ${fmt.format(sunrise)}`;
-                }
+                DOM.pillSun.textContent = (now >= sunrise && now < sunset)
+                    ? `🌇 ${fmt.format(sunset)}`
+                    : `🌅 ${fmt.format(sunrise)}`;
             }
 
-            // Dynamic Wallpaper
-            const bgUrl = selectWeatherBackground(cur.weather_code, Boolean(cur.is_day));
-            setBackgroundImage(bgUrl);
+            setBackgroundImage(selectWeatherBackground(cur.weather_code, Boolean(cur.is_day)));
         }
 
         async function fetchWeatherAndEnv() {
-            const loc = CONFIG.LOCATION;
-            const cacheKey = `${CONFIG.STORAGE_KEY}_${loc.LAT}_${loc.LON}_${CONFIG.TEMP_UNIT}`;
+            const { LAT, LON } = CONFIG.LOCATION;
+            const cacheKey = `${CONFIG.STORAGE_KEY}_${LAT}_${LON}_${CONFIG.TEMP_UNIT}`;
 
-            const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${loc.LAT}&longitude=${loc.LON}&current=temperature_2m,apparent_temperature,is_day,weather_code&daily=sunrise,sunset,uv_index_max,precipitation_probability_max&temperature_unit=${CONFIG.TEMP_UNIT}&wind_speed_unit=${CONFIG.WIND_UNIT}&timezone=auto&forecast_days=1`;
-            const aqiUrl = `https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${loc.LAT}&longitude=${loc.LON}&current=us_aqi`;
+            const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}&current=temperature_2m,apparent_temperature,is_day,weather_code&daily=sunrise,sunset,uv_index_max,precipitation_probability_max&temperature_unit=${CONFIG.TEMP_UNIT}&timezone=auto&forecast_days=1`;
+            const aqiUrl = `https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${LAT}&longitude=${LON}&current=us_aqi`;
 
             try {
                 const [weatherData, aqiData] = await Promise.all([
@@ -531,43 +460,40 @@
                     fetchWithTimeout(aqiUrl).catch(() => null)
                 ]);
 
-                localStorage.setItem(cacheKey, JSON.stringify({ weatherData, aqiData, ts: Date.now() }));
+                localStorage.setItem(cacheKey, JSON.stringify({ weatherData, aqiData }));
                 renderWeather(weatherData, aqiData, false);
             } catch (err) {
                 console.warn('Weather fetch failed, attempting cache fallback:', err);
-                const cachedRaw = localStorage.getItem(cacheKey);
-                if (cachedRaw) {
-                    try {
-                        const cached = JSON.parse(cachedRaw);
+                try {
+                    const cached = JSON.parse(localStorage.getItem(cacheKey));
+                    if (cached) {
                         renderWeather(cached.weatherData, cached.aqiData, true);
                         return;
-                    } catch (_) {}
-                }
+                    }
+                } catch (_) {}
                 DOM.weatherDesc.textContent = 'Weather Unavailable';
                 setBackgroundImage(CONFIG.BACKGROUNDS.FALLBACK);
             }
         }
 
         /* ==========================================================================
-           HEBCAL SHABBAT & JEWISH HOLIDAY CALENDAR (With Offline Fallback)
+           HEBCAL SHABBAT & JEWISH HOLIDAY CALENDAR
            ========================================================================== */
         function generateLocalShabbatFallback() {
             const now = new Date();
-            const events = [];
-            // Find upcoming Friday & Saturday
-            const dayOfWeek = now.getDay();
-            const daysUntilFriday = (5 - dayOfWeek + 7) % 7;
+            const daysUntilFriday = (5 - now.getDay() + 7) % 7;
             const friday = new Date(now.getFullYear(), now.getMonth(), now.getDate() + daysUntilFriday);
             const saturday = new Date(friday.getFullYear(), friday.getMonth(), friday.getDate() + 1);
-
             const fmtDate = new Intl.DateTimeFormat(CONFIG.LOCALE, { weekday: 'short', month: 'short', day: 'numeric' });
-            events.push({ title: '🕯️ Candle Lighting', sub: `${fmtDate.format(friday)} · ~18m before sunset` });
-            events.push({ title: '✨ Havdalah', sub: `${fmtDate.format(saturday)} · Nightfall` });
-            return events;
+
+            return [
+                { title: '🕯️ Candle Lighting', sub: `${fmtDate.format(friday)} · ~18m before sunset` },
+                { title: '✨ Havdalah', sub: `${fmtDate.format(saturday)} · Nightfall` }
+            ];
         }
 
         function renderHebcalEvents(items) {
-            if (!items || items.length === 0) {
+            if (!items?.length) {
                 DOM.hebcalEventsList.innerHTML = `<div class="glass-panel rounded-xl px-3.5 py-2.5 text-white/70 shadow-lg">No upcoming events</div>`;
                 return;
             }
@@ -587,26 +513,20 @@
             }
 
             const cacheKey = `${CONFIG.STORAGE_KEY}_hebcal_v4`;
-            const loc = CONFIG.LOCATION;
-            const url = `https://www.hebcal.com/shabbat?cfg=json&geo=pos&latitude=${loc.LAT}&longitude=${loc.LON}&tzid=America/New_York&M=on&b=${CONFIG.HEBCAL.CANDLE_LIGHTING_MINS}&m=${CONFIG.HEBCAL.HAVDALAH_MINS}`;
+            const { LAT, LON } = CONFIG.LOCATION;
+            const url = `https://www.hebcal.com/shabbat?cfg=json&geo=pos&latitude=${LAT}&longitude=${LON}&tzid=America/New_York&M=on&b=${CONFIG.HEBCAL.CANDLE_LIGHTING_MINS}&m=${CONFIG.HEBCAL.HAVDALAH_MINS}`;
 
             try {
                 const data = await fetchWithTimeout(url);
-                if (data && Array.isArray(data.items)) {
+                if (Array.isArray(data?.items)) {
                     const fmtDay = new Intl.DateTimeFormat(CONFIG.LOCALE, { weekday: 'short', month: 'short', day: 'numeric' });
+                    const categoryIcons = { candles: '🕯️', havdalah: '✨', parashat: '📖', holiday: '✡️' };
+
                     const parsed = data.items.map(item => {
                         const d = new Date(item.date);
                         const dayStr = !isNaN(d.getTime()) ? fmtDay.format(d) : '';
-                        let icon = '📅';
-                        if (item.category === 'candles') icon = '🕯️';
-                        else if (item.category === 'havdalah') icon = '✨';
-                        else if (item.category === 'parashat') icon = '📖';
-                        else if (item.category === 'holiday') icon = '✡️';
-
-                        return {
-                            title: `${icon} ${item.title}`,
-                            sub: dayStr
-                        };
+                        const icon = categoryIcons[item.category] || '📅';
+                        return { title: `${icon} ${item.title}`, sub: dayStr };
                     });
 
                     localStorage.setItem(cacheKey, JSON.stringify(parsed));
@@ -617,13 +537,13 @@
                 console.warn('Hebcal fetch failed, using cache/fallback:', err);
             }
 
-            const cached = localStorage.getItem(cacheKey);
-            if (cached) {
-                try {
-                    renderHebcalEvents(JSON.parse(cached));
+            try {
+                const cached = JSON.parse(localStorage.getItem(cacheKey));
+                if (cached) {
+                    renderHebcalEvents(cached);
                     return;
-                } catch (_) {}
-            }
+                }
+            } catch (_) {}
 
             renderHebcalEvents(generateLocalShabbatFallback());
         }
@@ -641,9 +561,7 @@
                 synth.volume.value = CONFIG.SOUND.CHIME_VOLUME_DB;
 
                 const now = Tone.now();
-                synth.triggerAttackRelease('C5', '8n', now);
-                synth.triggerAttackRelease('E5', '8n', now + 0.2);
-                synth.triggerAttackRelease('G5', '8n', now + 0.4);
+                ['C5', 'E5', 'G5'].forEach((note, idx) => synth.triggerAttackRelease(note, '8n', now + idx * 0.2));
                 synth.triggerAttackRelease('C6', '2n', now + 0.6);
             } catch (e) {
                 console.warn('Audio chime blocked:', e);
@@ -673,24 +591,18 @@
         }
 
         function stopTimer() {
-            if (state.timerInterval) {
-                clearInterval(state.timerInterval);
-                state.timerInterval = null;
-            }
+            clearInterval(state.timerInterval);
+            state.timerInterval = null;
             state.timerEndTime = null;
             DOM.btnCancelTimer.classList.add('hidden');
             DOM.btnCancelTimer.textContent = '✕ Stop';
         }
 
         async function cycleAmbientSound() {
-            // 0 = Off, 1 = Brown Noise, 2 = Soft Rain (Pink Noise + Lowpass), 3 = White Noise
             state.ambientIndex = (state.ambientIndex + 1) % 4;
 
             if (state.ambientNode) {
-                try {
-                    state.ambientNode.stop();
-                    state.ambientNode.dispose();
-                } catch (_) {}
+                try { state.ambientNode.stop(); state.ambientNode.dispose(); } catch (_) {}
                 state.ambientNode = null;
             }
             if (state.ambientGain) {
@@ -706,14 +618,11 @@
             try {
                 await Tone.start();
                 const types = ['', 'brown', 'pink', 'white'];
-                const noiseType = types[state.ambientIndex];
-
                 const gain = new Tone.Gain(Tone.dbToGain(CONFIG.SOUND.VOLUME_DB)).toDestination();
-                const noise = new Tone.Noise(noiseType);
+                const noise = new Tone.Noise(types[state.ambientIndex]);
 
                 if (state.ambientIndex === 2) {
-                    const filter = new Tone.Filter(650, 'lowpass').connect(gain);
-                    noise.connect(filter);
+                    noise.connect(new Tone.Filter(650, 'lowpass').connect(gain));
                 } else {
                     noise.connect(gain);
                 }
@@ -729,7 +638,7 @@
         }
 
         /* ==========================================================================
-           HARDWARE PROTECTION (Pixel Shift, Wake Lock, Network Health)
+           HARDWARE PROTECTION & CONTROLS
            ========================================================================== */
         function initPixelShift() {
             if (!CONFIG.PIXEL_SHIFT.ENABLED) return;
@@ -743,60 +652,41 @@
 
         async function requestWakeLock() {
             if ('wakeLock' in navigator) {
-                try {
-                    state.wakeLock = await navigator.wakeLock.request('screen');
-                } catch (_) {}
+                try { await navigator.wakeLock.request('screen'); } catch (_) {}
             }
         }
 
         function initNetworkMonitor() {
-            const updateOnlineStatus = () => {
-                if (navigator.onLine) {
-                    DOM.networkOfflinePill.classList.add('hidden');
-                } else {
-                    DOM.networkOfflinePill.classList.remove('hidden');
-                }
-            };
+            const updateStatus = () => DOM.networkOfflinePill.classList.toggle('hidden', navigator.onLine);
             window.addEventListener('online', () => {
-                updateOnlineStatus();
+                updateStatus();
                 fetchWeatherAndEnv();
                 fetchHebcalCalendar();
             });
-            window.addEventListener('offline', updateOnlineStatus);
-            updateOnlineStatus();
+            window.addEventListener('offline', updateStatus);
+            updateStatus();
         }
 
-        /* ==========================================================================
-           ALWAYS-VISIBLE BOTTOM-LEFT CONTROL DOCK & BLACKOUT MODE
-           ========================================================================== */
         function setBlackoutMode(active) {
             state.isBlackout = active;
-            if (active) {
-                DOM.blackoutOverlay.classList.remove('hidden');
-            } else {
-                DOM.blackoutOverlay.classList.add('hidden');
-            }
+            DOM.blackoutOverlay.classList.toggle('hidden', !active);
         }
 
         function initControls() {
-            // Wake from blackout on single tap
             DOM.blackoutOverlay.addEventListener('click', (e) => {
                 e.stopPropagation();
                 setBlackoutMode(false);
             });
 
-            // Double-tap anywhere on main screen to toggle Blackout Sleep Mode
             document.body.addEventListener('dblclick', (e) => {
                 if (e.target.closest('#control-dock') || state.isBlackout) return;
                 setBlackoutMode(true);
             });
 
-            // Quick Timer Buttons
             document.querySelectorAll('.timer-btn').forEach(btn => {
                 btn.addEventListener('click', (e) => {
                     e.stopPropagation();
-                    const mins = parseInt(btn.getAttribute('data-timer'), 10);
-                    startTimer(mins);
+                    startTimer(parseInt(btn.dataset.timer, 10));
                 });
             });
 
@@ -805,13 +695,11 @@
                 stopTimer();
             });
 
-            // Ambient Soundscape Cycle
             DOM.btnAmbientSound.addEventListener('click', (e) => {
                 e.stopPropagation();
                 cycleAmbientSound();
             });
 
-            // Cycle Wallpaper Manually
             DOM.btnCycleBg.addEventListener('click', (e) => {
                 e.stopPropagation();
                 const keys = Object.keys(CONFIG.BACKGROUNDS);
@@ -819,7 +707,6 @@
                 setBackgroundImage(CONFIG.BACKGROUNDS[keys[state.manualBgIndex]]);
             });
 
-            // Toggle Night Mode Override
             DOM.btnToggleNight.addEventListener('click', (e) => {
                 e.stopPropagation();
                 const currentlyNight = parseFloat(DOM.nightOverlay.style.opacity || '0') > 0.5;
@@ -827,20 +714,16 @@
                 updateNightMode();
             });
 
-            // Blackout Screen Button
             DOM.btnBlackout.addEventListener('click', (e) => {
                 e.stopPropagation();
                 setBlackoutMode(true);
             });
 
-            // Force Refresh Weather & Calendar
             DOM.btnRefresh.addEventListener('click', (e) => {
                 e.stopPropagation();
                 state.manualBgIndex = -1;
-                if (DOM.refreshIcon) {
-                    DOM.refreshIcon.style.transform = 'rotate(360deg)';
-                    setTimeout(() => { DOM.refreshIcon.style.transform = 'rotate(0deg)'; }, 550);
-                }
+                DOM.refreshIcon.style.transform = 'rotate(360deg)';
+                setTimeout(() => { DOM.refreshIcon.style.transform = 'rotate(0deg)'; }, 550);
                 fetchWeatherAndEnv();
                 fetchHebcalCalendar();
             });
@@ -867,9 +750,7 @@
             requestWakeLock();
 
             document.addEventListener('visibilitychange', () => {
-                if (document.visibilityState === 'visible') {
-                    requestWakeLock();
-                }
+                if (document.visibilityState === 'visible') requestWakeLock();
             });
         });
     </script>
