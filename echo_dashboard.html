@@ -33,6 +33,7 @@
             HAVDALAH_MINS: 5,                 // Minutes after sunset for Havdalah (e.g., 42, 50, 72)
             ISRAEL_SCHEDULE: false,           // true if located in Israel (1-day Yom Tov & Israeli Parsha), false for Diaspora
             MAX_CALENDAR_ITEMS: 5,            // Maximum number of event cards to show in top-left
+
             // 5. AUTO NIGHT DIMMING & BEDSIDE RED/AMBER CLOCK MODE (24-hour format: 0 to 23)
             NIGHT_MODE_ENABLED: true,
             NIGHT_START_HOUR: 22,             // 22 = 10:00 PM (Dimmed Night Mode)
@@ -135,6 +136,29 @@
             opacity: 1;
         }
 
+        /* iOS 26 Control Center Vertical Timer Capsule Slider */
+        .ios-timer-capsule {
+            background: rgba(15, 23, 42, 0.58);
+            backdrop-filter: blur(32px) saturate(190%);
+            -webkit-backdrop-filter: blur(32px) saturate(190%);
+            border: 1px solid rgba(255, 255, 255, 0.28);
+            box-shadow: 0 28px 56px -12px rgba(0, 0, 0, 0.72), inset 0 1px 1.5px rgba(255, 255, 255, 0.28);
+        }
+
+        .ios-timer-fill {
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(253, 224, 71, 0.92) 45%, rgba(245, 158, 11, 0.92) 100%);
+            box-shadow: 0 -6px 22px rgba(251, 191, 36, 0.45), inset 0 2px 4px rgba(255, 255, 255, 0.7);
+            transition: height 0.08s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+
+        .active-timer-pill {
+            background: rgba(15, 23, 42, 0.62);
+            backdrop-filter: blur(24px) saturate(180%);
+            -webkit-backdrop-filter: blur(24px) saturate(180%);
+            border: 1px solid rgba(252, 211, 77, 0.42);
+            box-shadow: 0 16px 38px -8px rgba(0, 0, 0, 0.65), 0 0 24px -4px rgba(251, 191, 36, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.22);
+        }
+
         @media (prefers-reduced-motion: reduce) {
             *, *::before, *::after {
                 animation-duration: 0.01ms !important;
@@ -146,34 +170,91 @@
 </head>
 <body class="h-screen w-screen relative overflow-hidden">
 
-    <!-- Dual Background Layers for Zero-Flicker Cross-Fades -->
-    <div id="bg-layer-1" class="bg-layer z-0 opacity-100"></div>
-    <div id="bg-layer-2" class="bg-layer z-0 opacity-0"></div>
+    <!-- Dual Cross-Fading Background Wallpaper Layers -->
+    <div id="bg-layer-1" class="bg-layer opacity-100 z-0"></div>
+    <div id="bg-layer-2" class="bg-layer opacity-0 z-0"></div>
 
-    <!-- Ambient Contrast & Auto Night Mode Overlays -->
-    <div class="absolute inset-0 bg-gradient-to-b from-black/45 via-black/15 to-black/75 z-10 pointer-events-none"></div>
-    <div id="night-overlay" class="absolute inset-0 z-30 opacity-0"></div>
+    <!-- Night Dimming & Bedside Vignette Overlay -->
+    <div id="night-overlay" class="fixed inset-0 opacity-0 z-10"></div>
 
     <!-- Full-Screen Blackout Sleep Overlay -->
     <div id="blackout-overlay" class="hidden fixed inset-0 bg-black z-50 cursor-pointer flex items-center justify-center">
         <span class="text-white/20 text-xs uppercase tracking-widest select-none">Tap anywhere to wake</span>
     </div>
 
-    <!-- Right-Side Vertical Touch Control Panel -->
-    <div id="control-dock" class="fixed right-4 sm:right-6 top-1/2 -translate-y-1/2 z-40">
-        <div class="glass-panel rounded-2xl p-2 sm:p-2.5 flex flex-col items-stretch gap-1.5 shadow-2xl text-xs sm:text-sm font-medium min-w-[5.25rem] sm:min-w-[6rem]">
-            <span class="text-[10px] font-bold uppercase tracking-wider text-white/60 text-center pt-0.5">Timers</span>
-            <button type="button" data-timer="5" class="timer-btn w-full px-2.5 py-1.5 rounded-xl bg-white/10 hover:bg-white/25 active:scale-95 transition text-center">⏱️ 5m</button>
-            <button type="button" data-timer="10" class="timer-btn w-full px-2.5 py-1.5 rounded-xl bg-white/10 hover:bg-white/25 active:scale-95 transition text-center">10m</button>
-            <button type="button" data-timer="15" class="timer-btn w-full px-2.5 py-1.5 rounded-xl bg-white/10 hover:bg-white/25 active:scale-95 transition text-center">15m</button>
-            <button type="button" data-timer="30" class="timer-btn w-full px-2.5 py-1.5 rounded-xl bg-white/10 hover:bg-white/25 active:scale-95 transition text-center">30m</button>
-            <button type="button" id="btn-cancel-timer" class="hidden w-full px-2.5 py-1.5 rounded-xl bg-red-500/40 hover:bg-red-500/60 text-red-100 active:scale-95 transition text-center tabular-nums">✕ Stop</button>
+    <!-- Top-Center Active Timer Pill -->
+    <div id="top-timer-pill" class="hidden fixed top-5 sm:top-7 left-1/2 -translate-x-1/2 z-40 pointer-events-auto">
+        <div class="active-timer-pill rounded-full px-5 py-2.5 sm:px-6 sm:py-3 flex items-center gap-3.5 sm:gap-4 transition-all duration-300">
+            <!-- Live Progress Ring -->
+            <div class="relative w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center shrink-0">
+                <svg class="w-full h-full -rotate-90" viewBox="0 0 36 36" aria-hidden="true">
+                    <circle cx="18" cy="18" r="15" fill="none" stroke="rgba(255, 255, 255, 0.16)" stroke-width="3.2"></circle>
+                    <circle id="top-timer-ring" cx="18" cy="18" r="15" fill="none" stroke="#fbbf24" stroke-width="3.2" stroke-linecap="round" stroke-dasharray="94.25" stroke-dashoffset="0" class="transition-all duration-200"></circle>
+                </svg>
+                <span class="absolute h-2 w-2 rounded-full bg-amber-300 animate-pulse"></span>
+            </div>
 
-            <div class="w-full h-px bg-white/20 my-0.5"></div>
+            <div class="flex items-baseline gap-2.5">
+                <span class="text-xs sm:text-sm font-bold uppercase tracking-widest text-amber-200/90">Timer</span>
+                <span id="top-timer-countdown" class="text-xl sm:text-2xl font-black text-white tabular-nums tracking-tight leading-none">05:00</span>
+            </div>
 
-            <button type="button" id="btn-ambient-sound" class="w-full px-2.5 py-1.5 rounded-xl bg-white/10 hover:bg-white/25 active:scale-95 transition text-center" title="Ambient Soundscape">🎧 Off</button>
-            <button type="button" id="btn-cycle-bg" class="w-full px-2.5 py-1.5 rounded-xl bg-white/10 hover:bg-white/25 active:scale-95 transition text-center" title="Cycle Wallpaper">🖼️ BG</button>
-            <button type="button" id="btn-toggle-night" class="w-full px-2.5 py-1.5 rounded-xl bg-white/10 hover:bg-white/25 active:scale-95 transition text-center" title="Toggle Night Dimming">🌙 Night</button>
+            <button type="button" id="btn-top-cancel-timer" class="ml-1 w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-white/15 hover:bg-red-500/75 text-white/90 hover:text-white flex items-center justify-center text-sm font-bold transition active:scale-90 border border-white/10" title="Cancel Timer" aria-label="Cancel Timer">✕</button>
+        </div>
+    </div>
+
+    <!-- iOS 26 Control Center Timer Selector Popover -->
+    <div id="ios-timer-popover" class="hidden fixed right-24 sm:right-28 top-1/2 -translate-y-1/2 z-50 flex flex-col items-center gap-3 select-none">
+        <div id="ios-timer-track" role="slider" aria-label="Timer Duration" aria-valuemin="1" aria-valuemax="60" aria-valuenow="5" tabindex="0" class="ios-timer-capsule relative w-24 sm:w-28 h-80 sm:h-96 rounded-[2.75rem] overflow-hidden cursor-ns-resize touch-none flex flex-col justify-end">
+            <!-- Dynamic Fill -->
+            <div id="ios-timer-fill" class="ios-timer-fill w-full pointer-events-none" style="height: 8.33%;"></div>
+
+            <!-- Subtle Notch Detents -->
+            <div class="absolute inset-x-6 inset-y-7 flex flex-col justify-between pointer-events-none opacity-40">
+                <span class="h-px w-full bg-white/60"></span>
+                <span class="h-px w-3/4 mx-auto bg-white/45"></span>
+                <span class="h-px w-full bg-white/60"></span>
+                <span class="h-px w-3/4 mx-auto bg-white/45"></span>
+                <span class="h-px w-full bg-white/60"></span>
+                <span class="h-px w-3/4 mx-auto bg-white/45"></span>
+                <span class="h-px w-full bg-white/60"></span>
+            </div>
+
+            <!-- Centered Readout Overlay -->
+            <div class="absolute inset-0 flex flex-col items-center justify-between py-5 pointer-events-none mix-blend-difference text-white">
+                <span class="text-xl sm:text-2xl">⏱️</span>
+                <div class="flex flex-col items-center leading-none">
+                    <span id="ios-timer-value" class="text-3xl sm:text-4xl font-black tabular-nums">5</span>
+                    <span class="text-xs font-bold uppercase tracking-widest mt-1.5 opacity-90">min</span>
+                </div>
+                <span class="text-[11px] font-semibold uppercase tracking-wider opacity-80">Slide</span>
+            </div>
+        </div>
+
+        <button type="button" id="btn-ios-timer-start" class="ios-timer-capsule px-6 py-2 rounded-full text-sm sm:text-base font-bold text-amber-200 hover:text-white hover:bg-white/20 active:scale-95 transition shadow-xl">
+            Start 5m
+        </button>
+    </div>
+
+    <!-- Right-Side Vertical Touch Control Panels (Separated) -->
+    <div id="control-dock" class="fixed right-4 sm:right-6 top-1/2 -translate-y-1/2 z-40 flex flex-col gap-2.5 text-xs sm:text-sm font-medium min-w-[5.25rem] sm:min-w-[6rem]">
+        <!-- Timer Panel -->
+        <div class="glass-panel rounded-2xl p-2 shadow-2xl">
+            <button type="button" id="btn-open-timer" class="w-full px-2.5 py-2 rounded-xl bg-white/10 hover:bg-white/25 active:scale-95 transition text-center font-semibold" title="Set Timer">⏱️ Timer</button>
+        </div>
+
+        <!-- Ambient Sounds Panel -->
+        <div class="glass-panel rounded-2xl p-2 flex flex-col items-stretch gap-1 shadow-2xl">
+            <button type="button" data-sound="white" class="sound-btn w-full px-2 py-1.5 rounded-xl bg-white/10 hover:bg-white/25 active:scale-95 transition text-center" title="White Noise">💨 White</button>
+            <button type="button" data-sound="fan" class="sound-btn w-full px-2 py-1.5 rounded-xl bg-white/10 hover:bg-white/25 active:scale-95 transition text-center" title="Box Fan">🌀 Fan</button>
+            <button type="button" data-sound="brown" class="sound-btn w-full px-2 py-1.5 rounded-xl bg-white/10 hover:bg-white/25 active:scale-95 transition text-center" title="Brown Noise">🌊 Brown</button>
+            <button type="button" data-sound="rain" class="sound-btn w-full px-2 py-1.5 rounded-xl bg-white/10 hover:bg-white/25 active:scale-95 transition text-center" title="Rainfall">🌧️ Rain</button>
+            <button type="button" data-sound="bowl" class="sound-btn w-full px-2 py-1.5 rounded-xl bg-white/10 hover:bg-white/25 active:scale-95 transition text-center" title="Singing Bowls">🔔 Bowl</button>
+        </div>
+
+        <!-- Display & Refresh Panel -->
+        <div class="glass-panel rounded-2xl p-2 flex flex-col items-stretch gap-1 shadow-2xl">
+            <button type="button" id="btn-toggle-night" class="w-full px-2.5 py-1.5 rounded-xl bg-white/10 hover:bg-white/25 active:scale-95 transition text-center" title="Toggle Day / Night / Bedside Mode">🌙 Night</button>
             <button type="button" id="btn-blackout" class="w-full px-2.5 py-1.5 rounded-xl bg-white/10 hover:bg-white/25 active:scale-95 transition text-center" title="Turn Screen Black">⬛ Off</button>
             <button type="button" id="btn-refresh" class="w-full px-2.5 py-1.5 rounded-xl bg-white/10 hover:bg-white/25 active:scale-95 transition text-center" title="Refresh Data"><span id="refresh-icon" class="inline-block transition-transform duration-500">🔄</span></button>
         </div>
@@ -346,9 +427,17 @@
             weatherAlertPill: document.getElementById('weather-alert-pill'),
             weatherAlertIcon: document.getElementById('weather-alert-icon'),
             weatherAlertText: document.getElementById('weather-alert-text'),
-            btnCancelTimer: document.getElementById('btn-cancel-timer'),
-            btnAmbientSound: document.getElementById('btn-ambient-sound'),
-            btnCycleBg: document.getElementById('btn-cycle-bg'),
+            topTimerPill: document.getElementById('top-timer-pill'),
+            topTimerRing: document.getElementById('top-timer-ring'),
+            topTimerCountdown: document.getElementById('top-timer-countdown'),
+            btnTopCancelTimer: document.getElementById('btn-top-cancel-timer'),
+            btnOpenTimer: document.getElementById('btn-open-timer'),
+            iosTimerPopover: document.getElementById('ios-timer-popover'),
+            iosTimerTrack: document.getElementById('ios-timer-track'),
+            iosTimerFill: document.getElementById('ios-timer-fill'),
+            iosTimerValue: document.getElementById('ios-timer-value'),
+            btnIosTimerStart: document.getElementById('btn-ios-timer-start'),
+            soundBtns: document.querySelectorAll('.sound-btn'),
             btnToggleNight: document.getElementById('btn-toggle-night'),
             btnBlackout: document.getElementById('btn-blackout'),
             btnRefresh: document.getElementById('btn-refresh'),
@@ -357,97 +446,163 @@
 
         const state = {
             activeBgLayer: 1,
-            bgCategory: 'clear',
-            bgIndex: 0,
-            displayModeOverride: null, // null = auto, 'day' | 'night' | 'bedside'
-            hebcalItems: [],
-            timerEndTime: null,
-            timerInterval: null,
+            currentWallpaperUrl: '',
+            weatherCategory: 'clear',
+            isDaytime: true,
+            lastTimeString: '',
+            lastDateKey: '',
+            nightModeOverride: null, // null = auto, 'day' | 'night' | 'bedside'
+            isBlackout: false,
             ambientMode: 'off',
-            ambientNodes: null
+            ambientNodes: null,
+            selectedTimerMins: 5,
+            timerTotalMs: 0,
+            timerEndTimestamp: null,
+            timerIntervalId: null,
+            candleLightingTimestamp: null,
+            hebcalItems: []
         };
 
         const WEATHER_CODES = {
-            0: { desc: 'Clear Sky', icon: '☀️', nightIcon: '🌙', category: 'clear' },
-            1: { desc: 'Mainly Clear', icon: '🌤️', nightIcon: '🌙', category: 'clear' },
-            2: { desc: 'Partly Cloudy', icon: '⛅', nightIcon: '☁️', category: 'cloudy' },
-            3: { desc: 'Overcast', icon: '☁️', nightIcon: '☁️', category: 'cloudy' },
-            45: { desc: 'Foggy', icon: '🌫️', nightIcon: '🌫️', category: 'cloudy' },
-            48: { desc: 'Rime Fog', icon: '🌫️', nightIcon: '🌫️', category: 'cloudy' },
-            51: { desc: 'Light Drizzle', icon: '🌦️', nightIcon: '🌧️', category: 'rain' },
-            53: { desc: 'Drizzle', icon: '🌦️', nightIcon: '🌧️', category: 'rain' },
-            55: { desc: 'Heavy Drizzle', icon: '🌧️', nightIcon: '🌧️', category: 'rain' },
-            61: { desc: 'Light Rain', icon: '🌦️', nightIcon: '🌧️', category: 'rain' },
-            63: { desc: 'Rain', icon: '🌧️', nightIcon: '🌧️', category: 'rain' },
-            65: { desc: 'Heavy Rain', icon: '🌧️', nightIcon: '🌧️', category: 'rain' },
-            71: { desc: 'Light Snow', icon: '🌨️', nightIcon: '🌨️', category: 'snow' },
-            73: { desc: 'Snow', icon: '❄️', nightIcon: '❄️', category: 'snow' },
-            75: { desc: 'Heavy Snow', icon: '❄️', nightIcon: '❄️', category: 'snow' },
-            80: { desc: 'Rain Showers', icon: '🌦️', nightIcon: '🌧️', category: 'rain' },
-            81: { desc: 'Moderate Showers', icon: '🌧️', nightIcon: '🌧️', category: 'rain' },
-            82: { desc: 'Violent Showers', icon: '⛈️', nightIcon: '⛈️', category: 'rain' },
-            95: { desc: 'Thunderstorm', icon: '⛈️', nightIcon: '⛈️', category: 'rain' },
-            96: { desc: 'Hail Storm', icon: '⛈️', nightIcon: '⛈️', category: 'rain' },
-            99: { desc: 'Heavy Hail', icon: '⛈️', nightIcon: '⛈️', category: 'rain' }
+            0: { desc: 'Clear Sky', icon: '☀️', cat: 'clear' },
+            1: { desc: 'Mainly Clear', icon: '🌤️', cat: 'clear' },
+            2: { desc: 'Partly Cloudy', icon: '⛅', cat: 'cloudy' },
+            3: { desc: 'Overcast', icon: '☁️', cat: 'cloudy' },
+            45: { desc: 'Fog', icon: '🌫️', cat: 'cloudy' },
+            48: { desc: 'Rime Fog', icon: '🌫️', cat: 'cloudy' },
+            51: { desc: 'Light Drizzle', icon: '🌦️', cat: 'rain' },
+            53: { desc: 'Drizzle', icon: '🌦️', cat: 'rain' },
+            55: { desc: 'Dense Drizzle', icon: '🌧️', cat: 'rain' },
+            56: { desc: 'Freezing Drizzle', icon: '🌧️', cat: 'rain' },
+            57: { desc: 'Heavy Freezing Drizzle', icon: '🌧️', cat: 'rain' },
+            61: { desc: 'Slight Rain', icon: '🌦️', cat: 'rain' },
+            63: { desc: 'Moderate Rain', icon: '🌧️', cat: 'rain' },
+            65: { desc: 'Heavy Rain', icon: '🌧️', cat: 'rain' },
+            66: { desc: 'Freezing Rain', icon: '🌧️', cat: 'rain' },
+            67: { desc: 'Heavy Freezing Rain', icon: '🌧️', cat: 'rain' },
+            71: { desc: 'Slight Snow', icon: '🌨️', cat: 'snow' },
+            73: { desc: 'Moderate Snow', icon: '❄️', cat: 'snow' },
+            75: { desc: 'Heavy Snow', icon: '❄️', cat: 'snow' },
+            77: { desc: 'Snow Grains', icon: '❄️', cat: 'snow' },
+            80: { desc: 'Light Showers', icon: '🌦️', cat: 'rain' },
+            81: { desc: 'Moderate Showers', icon: '🌧️', cat: 'rain' },
+            82: { desc: 'Violent Showers', icon: '⛈️', cat: 'rain' },
+            85: { desc: 'Light Snow Showers', icon: '🌨️', cat: 'snow' },
+            86: { desc: 'Heavy Snow Showers', icon: '❄️', cat: 'snow' },
+            95: { desc: 'Thunderstorm', icon: '⛈️', cat: 'rain' },
+            96: { desc: 'Storm with Hail', icon: '⛈️', cat: 'rain' },
+            99: { desc: 'Heavy Hail Storm', icon: '⛈️', cat: 'rain' }
         };
 
-        const monthFormatter = new Intl.DateTimeFormat(CONFIG.LOCALE, { month: 'short', timeZone: CONFIG.TIMEZONE });
-        const dayFormatter = new Intl.DateTimeFormat(CONFIG.LOCALE, { day: 'numeric', timeZone: CONFIG.TIMEZONE });
-
         /* ==========================================================================
-           CLOCK & NIGHT MODE
+           DATE & TIME FORMATTERS
            ========================================================================== */
-        const timePartsFormatter = new Intl.DateTimeFormat('en-US', {
+        const timePartsFormatter = new Intl.DateTimeFormat(CONFIG.LOCALE, {
+            timeZone: CONFIG.TIMEZONE,
+            hour: CONFIG.USE_24_HOUR ? '2-digit' : 'numeric',
+            minute: '2-digit',
+            hour12: !CONFIG.USE_24_HOUR
+        });
+
+        const shortTimeFormatter = new Intl.DateTimeFormat(CONFIG.LOCALE, {
+            timeZone: CONFIG.TIMEZONE,
             hour: 'numeric',
             minute: '2-digit',
-            hour12: !CONFIG.USE_24_HOUR,
-            timeZone: CONFIG.TIMEZONE
+            hour12: !CONFIG.USE_24_HOUR
         });
 
-        const nightHourFormatter = new Intl.DateTimeFormat('en-US', {
+        const monthFormatter = new Intl.DateTimeFormat(CONFIG.LOCALE, {
+            timeZone: CONFIG.TIMEZONE,
+            month: 'short'
+        });
+
+        const dayFormatter = new Intl.DateTimeFormat(CONFIG.LOCALE, {
+            timeZone: CONFIG.TIMEZONE,
+            day: 'numeric'
+        });
+
+        const hebcalDayFormatter = new Intl.DateTimeFormat(CONFIG.LOCALE, {
+            timeZone: CONFIG.TIMEZONE,
+            weekday: 'short',
+            month: 'short',
+            day: 'numeric'
+        });
+
+        const hour24Formatter = new Intl.DateTimeFormat('en-US', {
+            timeZone: CONFIG.TIMEZONE,
             hour: 'numeric',
-            hour12: false,
-            timeZone: CONFIG.TIMEZONE
+            hour12: false
         });
 
-        function updateClock() {
-            const now = new Date();
-            const parts = timePartsFormatter.formatToParts(now);
-            const hourPart = parts.find(p => p.type === 'hour')?.value || '--';
-            const minPart = parts.find(p => p.type === 'minute')?.value || '--';
-            const dayPeriod = parts.find(p => p.type === 'dayPeriod')?.value || '';
-
-            DOM.time.textContent = `${hourPart}:${minPart}`;
-            DOM.ampm.textContent = CONFIG.USE_24_HOUR ? '' : dayPeriod.toUpperCase();
-
-            DOM.dateMonth.textContent = monthFormatter.format(now).toUpperCase();
-            DOM.dateDay.textContent = dayFormatter.format(now);
-            updateNightMode(now);
-            updateCandleCountdown(now);
-        }
-
-        function isHourInRange(hour, start, end) {
-            if (start === end) return false;
-            return start > end ? (hour >= start || hour < end) : (hour >= start && hour < end);
-        }
-
-        function updateNightMode(now = new Date()) {
-            let mode = 'day';
-
-            if (state.displayModeOverride !== null) {
-                mode = state.displayModeOverride;
-            } else if (CONFIG.NIGHT_MODE.ENABLED) {
-                const h = parseInt(nightHourFormatter.format(now), 10) % 24;
-                const { START_HOUR, BEDSIDE_START_HOUR, END_HOUR } = CONFIG.NIGHT_MODE;
-                if (isHourInRange(h, BEDSIDE_START_HOUR, END_HOUR)) {
-                    mode = 'bedside';
-                } else if (isHourInRange(h, START_HOUR, END_HOUR)) {
-                    mode = 'night';
-                }
+        /* ==========================================================================
+           CACHE & NETWORK UTILITIES
+           ========================================================================== */
+        function readCache() {
+            try {
+                const raw = localStorage.getItem(CONFIG.STORAGE_KEY);
+                return raw ? JSON.parse(raw) : {};
+            } catch {
+                return {};
             }
+        }
 
+        function writeCache(patch) {
+            try {
+                const current = readCache();
+                localStorage.setItem(CONFIG.STORAGE_KEY, JSON.stringify({ ...current, ...patch }));
+            } catch {
+                // Ignore storage quota errors
+            }
+        }
+
+        async function fetchWithTimeout(url, timeoutMs = CONFIG.FETCH_TIMEOUT_MS) {
+            const controller = new AbortController();
+            const timer = setTimeout(() => controller.abort(), timeoutMs);
+            try {
+                const response = await fetch(url, { signal: controller.signal });
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                return await response.json();
+            } finally {
+                clearTimeout(timer);
+            }
+        }
+
+        function updateNetworkStatus() {
+            DOM.networkOfflinePill.classList.toggle('hidden', navigator.onLine);
+        }
+
+        /* ==========================================================================
+           CLOCK, DISPLAY MODE (DAY / NIGHT / BEDSIDE) & CANDLE COUNTDOWN
+           ========================================================================== */
+        function getConfiguredHour(now) {
+            const h = parseInt(hour24Formatter.format(now), 10);
+            return h === 24 ? 0 : h;
+        }
+
+        function determineDisplayMode(now) {
+            if (state.nightModeOverride) return state.nightModeOverride;
+            if (!CONFIG.NIGHT_MODE.ENABLED) return 'day';
+
+            const hour = getConfiguredHour(now);
+            const { START_HOUR, BEDSIDE_START_HOUR, END_HOUR } = CONFIG.NIGHT_MODE;
+
+            const isBedsideWindow = BEDSIDE_START_HOUR > END_HOUR
+                ? (hour >= BEDSIDE_START_HOUR || hour < END_HOUR)
+                : (hour >= BEDSIDE_START_HOUR && hour < END_HOUR);
+
+            if (isBedsideWindow) return 'bedside';
+
+            const isNightWindow = START_HOUR > END_HOUR
+                ? (hour >= START_HOUR || hour < END_HOUR)
+                : (hour >= START_HOUR && hour < END_HOUR);
+
+            return isNightWindow ? 'night' : 'day';
+        }
+
+        function applyDisplayMode(now) {
+            const mode = determineDisplayMode(now);
             document.body.classList.toggle('bedside-mode', mode === 'bedside');
-            DOM.nightOverlay.style.opacity = (mode === 'night' || mode === 'bedside') ? '1' : '0';
+            DOM.nightOverlay.style.opacity = mode === 'night' ? '1' : '0';
 
             if (mode === 'bedside') {
                 DOM.btnToggleNight.textContent = '🔴 Bedside';
@@ -458,149 +613,186 @@
             }
         }
 
-        /* ==========================================================================
-           WALLPAPER CROSS-FADE ENGINE
-           ========================================================================== */
-        function setWallpaper(category = state.bgCategory, advanceIndex = false) {
-            state.bgCategory = category;
-            const pool = CONFIG.WEATHER_WALLPAPERS[category] || CONFIG.FALLBACK_WALLPAPERS;
+        function formatCountdownText(diffMs) {
+            const totalSecs = Math.max(0, Math.floor(diffMs / 1000));
+            const hrs = Math.floor(totalSecs / 3600);
+            const mins = Math.floor((totalSecs % 3600) / 60);
+            const secs = totalSecs % 60;
 
-            if (advanceIndex) {
-                state.bgIndex = (state.bgIndex + 1) % pool.length;
+            if (hrs > 0) return `in ${hrs}h ${mins}m`;
+            if (mins > 0) return `in ${mins}m ${String(secs).padStart(2, '0')}s`;
+            return `in ${secs}s`;
+        }
+
+        function updateCandleCountdown(now) {
+            const el = document.getElementById('candle-countdown-badge');
+            if (!el || !state.candleLightingTimestamp) return;
+
+            const diff = state.candleLightingTimestamp - now.getTime();
+            const threeHoursMs = 3 * 60 * 60 * 1000;
+
+            if (diff > 0 && diff <= threeHoursMs) {
+                el.textContent = formatCountdownText(diff);
+                el.classList.remove('hidden');
+            } else if (diff <= 0 && diff > -15 * 60 * 1000) {
+                el.textContent = 'Shabbat Shalom';
+                el.classList.remove('hidden');
             } else {
-                state.bgIndex = state.bgIndex % pool.length;
-            }
-
-            const targetUrl = pool[state.bgIndex];
-            const preload = new Image();
-            preload.onload = () => applyBackgroundImage(targetUrl);
-            preload.onerror = () => {
-                const fallbackUrl = CONFIG.FALLBACK_WALLPAPERS[0];
-                applyBackgroundImage(fallbackUrl);
-            };
-            preload.src = targetUrl;
-        }
-
-        function applyBackgroundImage(url) {
-            const incoming = state.activeBgLayer === 1 ? DOM.bg2 : DOM.bg1;
-            const outgoing = state.activeBgLayer === 1 ? DOM.bg1 : DOM.bg2;
-
-            incoming.style.backgroundImage = `url("${url}")`;
-            incoming.classList.remove('opacity-0');
-            incoming.classList.add('opacity-100');
-
-            outgoing.classList.remove('opacity-100');
-            outgoing.classList.add('opacity-0');
-
-            state.activeBgLayer = state.activeBgLayer === 1 ? 2 : 1;
-        }
-
-        /* ==========================================================================
-           NETWORK HELPER & WEATHER / AIR QUALITY FETCH
-           ========================================================================== */
-        async function fetchWithTimeout(url, timeoutMs = CONFIG.FETCH_TIMEOUT_MS) {
-            const controller = new AbortController();
-            const id = setTimeout(() => controller.abort(), timeoutMs);
-            try {
-                const res = await fetch(url, { signal: controller.signal });
-                if (!res.ok) throw new Error(`HTTP ${res.status}`);
-                return await res.json();
-            } finally {
-                clearTimeout(id);
+                el.classList.add('hidden');
             }
         }
 
-        async function fetchWeatherAndEnv() {
-            const { LAT, LON } = CONFIG.LOCATION;
-            const cacheKey = `${CONFIG.STORAGE_KEY}_${LAT}_${LON}_${CONFIG.TEMP_UNIT}_${CONFIG.TIMEZONE}`;
-            const tzParam = encodeURIComponent(CONFIG.TIMEZONE || 'auto');
+        function updateClock() {
+            const now = new Date();
+            const parts = timePartsFormatter.formatToParts(now);
+            let timeStr = '';
+            let ampmStr = '';
 
-            const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}&current=temperature_2m,apparent_temperature,is_day,weather_code,wind_gusts_10m&daily=sunrise,sunset,uv_index_max,precipitation_probability_max,temperature_2m_min&temperature_unit=${CONFIG.TEMP_UNIT}&wind_speed_unit=mph&timezone=${tzParam}&forecast_days=1`;
-            const aqiUrl = `https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${LAT}&longitude=${LON}&current=us_aqi`;
-
-            try {
-                const [weatherData, aqiData] = await Promise.all([
-                    fetchWithTimeout(weatherUrl),
-                    fetchWithTimeout(aqiUrl).catch(() => null)
-                ]);
-
-                const payload = {
-                    temp: Math.round(weatherData.current.temperature_2m),
-                    feelsLike: Math.round(weatherData.current.apparent_temperature),
-                    isDay: weatherData.current.is_day === 1,
-                    code: weatherData.current.weather_code,
-                    windGusts: Math.round(weatherData.current.wind_gusts_10m ?? 0),
-                    tempMin: Math.round(weatherData.daily?.temperature_2m_min?.[0] ?? weatherData.current.temperature_2m),
-                    rainChance: weatherData.daily?.precipitation_probability_max?.[0] ?? 0,
-                    uvMax: Math.round(weatherData.daily?.uv_index_max?.[0] ?? 0),
-                    sunrise: weatherData.daily?.sunrise?.[0] ?? null,
-                    sunset: weatherData.daily?.sunset?.[0] ?? null,
-                    aqi: aqiData?.current?.us_aqi ?? null
-                };
-
-                localStorage.setItem(cacheKey, JSON.stringify(payload));
-                renderWeather(payload);
-            } catch (err) {
-                console.warn('Weather fetch failed, checking cache:', err);
-                const cached = localStorage.getItem(cacheKey);
-                if (cached) {
-                    renderWeather(JSON.parse(cached));
-                } else {
-                    DOM.weatherDesc.textContent = 'Weather unavailable';
+            for (const p of parts) {
+                if (p.type === 'dayPeriod') {
+                    ampmStr = p.value;
+                } else if (p.type !== 'literal' || p.value === ':') {
+                    timeStr += p.value;
                 }
             }
+
+            if (timeStr !== state.lastTimeString) {
+                DOM.time.textContent = timeStr;
+                DOM.ampm.textContent = ampmStr;
+                state.lastTimeString = timeStr;
+            }
+
+            const monthStr = monthFormatter.format(now);
+            const dayStr = dayFormatter.format(now);
+            const dateKey = `${monthStr}-${dayStr}`;
+
+            if (dateKey !== state.lastDateKey) {
+                DOM.dateMonth.textContent = monthStr;
+                DOM.dateDay.textContent = dayStr;
+                state.lastDateKey = dateKey;
+                if (state.hebcalItems.length) {
+                    renderHebcalEvents(state.hebcalItems);
+                }
+            }
+
+            applyDisplayMode(now);
+            updateCandleCountdown(now);
         }
 
-        function evaluateWeatherAlert(data) {
-            const isF = CONFIG.TEMP_UNIT === 'fahrenheit';
-            const freezeThreshold = isF ? 32 : 0;
-            const frostThreshold = isF ? 36 : 2;
-            const severeCodes = [65, 75, 82, 95, 96, 99];
+        function applyPixelShift() {
+            if (!CONFIG.PIXEL_SHIFT.ENABLED) return;
+            const max = CONFIG.PIXEL_SHIFT.MAX_OFFSET_PX;
+            const dx = Math.floor(Math.random() * (max * 2 + 1)) - max;
+            const dy = Math.floor(Math.random() * (max * 2 + 1)) - max;
+            DOM.root.style.transform = `translate(${dx}px, ${dy}px)`;
+        }
 
-            if (severeCodes.includes(data.code)) {
-                return { icon: '⛈️', text: `Severe Weather: ${WEATHER_CODES[data.code]?.desc || 'Storm Warning'}` };
+        /* ==========================================================================
+           WALLPAPER CROSS-FADING
+           ========================================================================== */
+        function selectWeatherWallpaper() {
+            let pool;
+            if (!state.isDaytime && state.weatherCategory === 'clear') {
+                pool = CONFIG.WEATHER_WALLPAPERS.night;
+            } else {
+                pool = CONFIG.WEATHER_WALLPAPERS[state.weatherCategory] || CONFIG.FALLBACK_WALLPAPERS;
             }
-            if (data.windGusts >= 35) {
-                return { icon: '💨', text: `High Wind Gusts (${data.windGusts} mph)` };
+
+            const candidates = pool.filter(u => u !== state.currentWallpaperUrl);
+            const chosen = (candidates.length ? candidates : pool)[
+                Math.floor(Math.random() * (candidates.length || pool.length))
+            ];
+            crossfadeWallpaper(chosen);
+        }
+
+        function crossfadeWallpaper(url) {
+            if (!url || url === state.currentWallpaperUrl) return;
+            const img = new Image();
+            img.onload = () => {
+                state.currentWallpaperUrl = url;
+                const nextLayer = state.activeBgLayer === 1 ? DOM.bg2 : DOM.bg1;
+                const prevLayer = state.activeBgLayer === 1 ? DOM.bg1 : DOM.bg2;
+                nextLayer.style.backgroundImage = `url('${url}')`;
+                nextLayer.style.opacity = '1';
+                prevLayer.style.opacity = '0';
+                state.activeBgLayer = state.activeBgLayer === 1 ? 2 : 1;
+            };
+            img.onerror = () => {
+                const fallback = CONFIG.FALLBACK_WALLPAPERS[0];
+                if (url !== fallback) crossfadeWallpaper(fallback);
+            };
+            img.src = url;
+        }
+
+        /* ==========================================================================
+           WEATHER, AIR QUALITY & SEVERE WEATHER / FROST ALERT
+           ========================================================================== */
+        function evaluateWeatherAlert(current, daily) {
+            const temp = Number(current.temperature_2m);
+            const gusts = Number(current.wind_gusts_10m || 0);
+            const code = Number(current.weather_code);
+            const aqi = Number(current.us_aqi || 0);
+            const minToday = Array.isArray(daily?.temperature_2m_min) ? Number(daily.temperature_2m_min[0]) : temp;
+
+            const isFahrenheit = CONFIG.TEMP_UNIT === 'fahrenheit';
+            const freezeThresh = isFahrenheit ? 32 : 0;
+            const frostThresh = isFahrenheit ? 36 : 2.5;
+            const highWindThresh = isFahrenheit ? 35 : 56; // mph vs km/h
+
+            if ([95, 96, 99].includes(code)) {
+                return { icon: '⛈️', text: 'Thunderstorm Alert' };
             }
-            if (data.temp <= freezeThreshold) {
-                return { icon: '🥶', text: `Freeze Warning (${data.temp}°)` };
+            if ([66, 67, 56, 57].includes(code)) {
+                return { icon: '🧊', text: 'Freezing Rain / Ice Alert' };
             }
-            if (data.temp <= frostThreshold || data.tempMin <= frostThreshold) {
-                return { icon: '❄️', text: `Frost Advisory (Low ${data.tempMin}°)` };
+            if (temp <= freezeThresh || minToday <= freezeThresh) {
+                return { icon: '❄️', text: `Freeze Warning (Low ${Math.round(minToday)}°)` };
             }
-            if (data.aqi !== null && data.aqi >= 150) {
-                return { icon: '😷', text: `Unhealthy Air Quality (AQI ${data.aqi})` };
+            if (temp <= frostThresh || minToday <= frostThresh) {
+                return { icon: '🌡️', text: `Frost Advisory (Low ${Math.round(minToday)}°)` };
+            }
+            if (gusts >= highWindThresh) {
+                const unitLabel = isFahrenheit ? 'mph' : 'km/h';
+                return { icon: '💨', text: `High Wind Gusts (${Math.round(gusts)} ${unitLabel})` };
+            }
+            if (aqi >= 150) {
+                return { icon: '😷', text: `Unhealthy Air Quality (AQI ${Math.round(aqi)})` };
             }
             return null;
         }
 
         function renderWeather(data) {
-            const info = WEATHER_CODES[data.code] || { desc: 'Clear', icon: '🌡️', nightIcon: '🌙', category: 'clear' };
-            DOM.weatherIcon.textContent = data.isDay ? info.icon : info.nightIcon;
-            DOM.weatherTemp.textContent = `${data.temp}°`;
+            if (!data || !data.current) return;
+            const c = data.current;
+            const d = data.daily || {};
+            const info = WEATHER_CODES[c.weather_code] || { desc: 'Clear', icon: '🌤️', cat: 'clear' };
+
+            state.weatherCategory = info.cat;
+            state.isDaytime = c.is_day === 1;
+
+            DOM.weatherIcon.textContent = (!state.isDaytime && c.weather_code <= 1) ? '🌙' : info.icon;
+            DOM.weatherTemp.textContent = `${Math.round(c.temperature_2m)}°`;
             DOM.weatherDesc.textContent = info.desc;
 
-            DOM.pillFeels.textContent = `Feels ${data.feelsLike}°`;
-            DOM.pillRain.textContent = `💧 ${data.rainChance}%`;
-            DOM.pillUv.textContent = `☀️ UV ${data.uvMax}`;
-            DOM.pillAqi.textContent = data.aqi !== null ? `🍃 AQI ${data.aqi}` : '🍃 AQI --';
+            DOM.pillFeels.textContent = `Feels ${Math.round(c.apparent_temperature)}°`;
 
-            if (data.sunrise && data.sunset) {
-                const now = new Date();
-                const sunriseTime = new Date(data.sunrise);
-                const sunsetTime = new Date(data.sunset);
-                const targetTime = (now < sunriseTime) ? sunriseTime : (now < sunsetTime ? sunsetTime : sunriseTime);
-                const label = (now >= sunriseTime && now < sunsetTime) ? '🌇' : '🌅';
-                const formatted = targetTime.toLocaleTimeString(CONFIG.LOCALE, {
-                    hour: 'numeric',
-                    minute: '2-digit',
-                    hour12: !CONFIG.USE_24_HOUR
-                });
-                DOM.pillSun.textContent = `${label} ${formatted}`;
+            const precipProb = Array.isArray(d.precipitation_probability_max) ? d.precipitation_probability_max[0] : 0;
+            DOM.pillRain.textContent = `💧 ${precipProb ?? 0}%`;
+
+            const uv = typeof c.uv_index === 'number' ? Math.round(c.uv_index) : '--';
+            DOM.pillUv.textContent = `☀️ UV ${uv}`;
+
+            const aqi = typeof c.us_aqi === 'number' ? Math.round(c.us_aqi) : '--';
+            DOM.pillAqi.textContent = `🍃 AQI ${aqi}`;
+
+            if (Array.isArray(d.sunrise) && Array.isArray(d.sunset) && d.sunrise[0] && d.sunset[0]) {
+                const targetIso = state.isDaytime ? d.sunset[0] : d.sunrise[0];
+                const sunEmoji = state.isDaytime ? '🌇' : '🌅';
+                const formattedSun = shortTimeFormatter.format(new Date(targetIso));
+                DOM.pillSun.textContent = `${sunEmoji} ${formattedSun}`;
             }
 
-            const alertInfo = evaluateWeatherAlert(data);
+            const alertInfo = evaluateWeatherAlert(c, d);
             if (alertInfo) {
                 DOM.weatherAlertIcon.textContent = alertInfo.icon;
                 DOM.weatherAlertText.textContent = alertInfo.text;
@@ -609,164 +801,205 @@
                 DOM.weatherAlertPill.classList.add('hidden');
             }
 
-            const bgCategory = data.isDay ? info.category : 'night';
-            if (bgCategory !== state.bgCategory) {
-                setWallpaper(bgCategory, false);
+            selectWeatherWallpaper();
+        }
+
+        async function fetchWeather() {
+            const { LAT, LON } = CONFIG.LOCATION;
+            const windUnit = CONFIG.TEMP_UNIT === 'fahrenheit' ? 'mph' : 'kmh';
+            const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}&current=temperature_2m,apparent_temperature,is_day,weather_code,uv_index,wind_gusts_10m&daily=sunrise,sunset,precipitation_probability_max,temperature_2m_min&temperature_unit=${CONFIG.TEMP_UNIT}&wind_speed_unit=${windUnit}&timezone=${encodeURIComponent(CONFIG.TIMEZONE)}&forecast_days=2`;
+            const aqiUrl = `https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${LAT}&longitude=${LON}&current=us_aqi&timezone=${encodeURIComponent(CONFIG.TIMEZONE)}`;
+
+            try {
+                const [weatherData, aqiData] = await Promise.all([
+                    fetchWithTimeout(weatherUrl),
+                    fetchWithTimeout(aqiUrl).catch(() => null)
+                ]);
+
+                if (aqiData?.current && typeof aqiData.current.us_aqi === 'number') {
+                    weatherData.current.us_aqi = aqiData.current.us_aqi;
+                }
+
+                renderWeather(weatherData);
+                writeCache({ weather: weatherData, weatherTs: Date.now() });
+            } catch {
+                const cached = readCache().weather;
+                if (cached) renderWeather(cached);
             }
         }
 
         /* ==========================================================================
-           HEBCAL SHABBAT & HOLIDAY CALENDAR
+           HEBCAL SHABBAT & HOLIDAY SCHEDULE (NEXT 36 HOURS ONLY)
            ========================================================================== */
-        async function fetchHebcalCalendar() {
+        function parseEventStartTimestamp(item) {
+            if (!item || !item.date) return null;
+            if (item.date.includes('T')) {
+                const ts = Date.parse(item.date);
+                return Number.isNaN(ts) ? null : ts;
+            }
+            // All-day date (YYYY-MM-DD): treat start of day in local/configured context
+            const [y, m, d] = item.date.split('-').map(Number);
+            if (!y || !m || !d) return null;
+            return new Date(y, m - 1, d, 0, 0, 0).getTime();
+        }
+
+        function isEventWithin36Hours(item, nowMs) {
+            const startMs = parseEventStartTimestamp(item);
+            if (!startMs) return false;
+
+            const windowMs = 36 * 60 * 60 * 1000;
+            if (item.date.includes('T')) {
+                // Timed event: show from 30 mins ago up to 36 hours ahead
+                return startMs >= (nowMs - 30 * 60 * 1000) && startMs <= (nowMs + windowMs);
+            }
+            // All-day event: show if today (end of day >= now) or starts within 36 hours
+            const endOfDayMs = startMs + 24 * 60 * 60 * 1000;
+            return endOfDayMs >= nowMs && startMs <= (nowMs + windowMs);
+        }
+
+        function getHebcalIcon(category) {
+            switch (category) {
+                case 'candles': return '🕯️';
+                case 'havdalah': return '✨';
+                case 'parashat': return '📖';
+                case 'holiday': return '✡️';
+                case 'roshchodesh': return '🌒';
+                case 'omer': return '🌾';
+                default: return '📅';
+            }
+        }
+
+        function renderHebcalEvents(items) {
+            state.hebcalItems = Array.isArray(items) ? items : [];
+
+            if (!CONFIG.HEBCAL.ENABLED) {
+                DOM.hebcalCard.classList.add('hidden');
+                return;
+            }
+
+            const now = new Date();
+            const nowMs = now.getTime();
+            const filtered = state.hebcalItems
+                .filter(item => isEventWithin36Hours(item, nowMs))
+                .slice(0, CONFIG.HEBCAL.MAX_ITEMS);
+
+            if (!filtered.length) {
+                DOM.hebcalCard.classList.add('hidden');
+                state.candleLightingTimestamp = null;
+                return;
+            }
+
+            DOM.hebcalCard.classList.remove('hidden');
+            state.candleLightingTimestamp = null;
+            DOM.hebcalEventsList.innerHTML = '';
+
+            filtered.forEach(item => {
+                const isCandles = item.category === 'candles';
+                const eventTs = parseEventStartTimestamp(item);
+                const isImminentCandles = isCandles && eventTs && (eventTs - nowMs) > -15 * 60 * 1000 && (eventTs - nowMs) <= 3 * 60 * 60 * 1000;
+
+                if (isCandles && eventTs && !state.candleLightingTimestamp) {
+                    state.candleLightingTimestamp = eventTs;
+                }
+
+                const card = document.createElement('div');
+                card.className = isImminentCandles
+                    ? 'glass-panel rounded-[clamp(0.75rem,1.75vh,1.15rem)] px-[clamp(0.65rem,1.15vw,1.15rem)] py-[clamp(0.45rem,1.15vh,0.85rem)] border-amber-300/60 bg-amber-500/15 shadow-lg transition'
+                    : 'glass-panel rounded-[clamp(0.75rem,1.75vh,1.15rem)] px-[clamp(0.65rem,1.15vw,1.15rem)] py-[clamp(0.45rem,1.15vh,0.85rem)] transition';
+
+                const dateObj = item.date.includes('T')
+                    ? new Date(item.date)
+                    : new Date(`${item.date}T12:00:00`);
+                const dayLabel = hebcalDayFormatter.format(dateObj);
+                const timeLabel = item.date.includes('T') ? ` • ${shortTimeFormatter.format(dateObj)}` : '';
+
+                const titleRow = document.createElement('div');
+                titleRow.className = 'flex items-center justify-between gap-2 font-semibold leading-snug';
+
+                const leftTitle = document.createElement('span');
+                leftTitle.className = 'truncate';
+                leftTitle.textContent = `${getHebcalIcon(item.category)} ${item.title}`;
+                titleRow.appendChild(leftTitle);
+
+                if (isCandles) {
+                    const badge = document.createElement('span');
+                    badge.id = 'candle-countdown-badge';
+                    badge.className = 'hidden shrink-0 px-2 py-0.5 rounded-full bg-amber-400/25 border border-amber-300/50 text-amber-200 text-[0.7em] font-bold tabular-nums';
+                    titleRow.appendChild(badge);
+                }
+
+                const subRow = document.createElement('div');
+                subRow.className = 'text-[0.82em] text-amber-200/85 mt-0.5 truncate';
+                subRow.textContent = `${dayLabel}${timeLabel}`;
+
+                card.appendChild(titleRow);
+                card.appendChild(subRow);
+                DOM.hebcalEventsList.appendChild(card);
+            });
+
+            updateCandleCountdown(now);
+        }
+
+        async function fetchHebcal() {
             if (!CONFIG.HEBCAL.ENABLED) {
                 DOM.hebcalCard.classList.add('hidden');
                 return;
             }
 
             const { LAT, LON } = CONFIG.LOCATION;
-            const tzid = encodeURIComponent(CONFIG.TIMEZONE || 'America/New_York');
-            const israelParam = CONFIG.HEBCAL.ISRAEL ? '&i=on' : '';
-            const cacheKey = `${CONFIG.STORAGE_KEY}_hebcal_${LAT}_${LON}_${CONFIG.TIMEZONE}_${CONFIG.HEBCAL.CANDLE_LIGHTING_MINS}_${CONFIG.HEBCAL.HAVDALAH_MINS}_${CONFIG.HEBCAL.ISRAEL}`;
-            const url = `https://www.hebcal.com/shabbat?cfg=json&geo=pos&latitude=${LAT}&longitude=${LON}&tzid=${tzid}&M=on&b=${CONFIG.HEBCAL.CANDLE_LIGHTING_MINS}&m=${CONFIG.HEBCAL.HAVDALAH_MINS}${israelParam}`;
+            const { CANDLE_LIGHTING_MINS, HAVDALAH_MINS, ISRAEL } = CONFIG.HEBCAL;
+            const cacheKey = `${LAT.toFixed(3)}_${LON.toFixed(3)}_${CANDLE_LIGHTING_MINS}_${HAVDALAH_MINS}_${ISRAEL}`;
+            const url = `https://www.hebcal.com/hebcal?v=1&cfg=json&maj=on&min=on&mod=on&nx=on&ss=on&mf=on&c=on&s=on&geo=pos&latitude=${LAT}&longitude=${LON}&tzid=${encodeURIComponent(CONFIG.TIMEZONE)}&b=${CANDLE_LIGHTING_MINS}&M=on&m=${HAVDALAH_MINS}&i=${ISRAEL ? 'on' : 'off'}`;
 
             try {
                 const data = await fetchWithTimeout(url);
-                if (Array.isArray(data?.items)) {
-                    const fmtDay = new Intl.DateTimeFormat(CONFIG.LOCALE, {
-                        weekday: 'short',
-                        month: 'short',
-                        day: 'numeric',
-                        timeZone: CONFIG.TIMEZONE
-                    });
-                    const fmtTime = new Intl.DateTimeFormat(CONFIG.LOCALE, {
-                        hour: 'numeric',
-                        minute: '2-digit',
-                        hour12: !CONFIG.USE_24_HOUR,
-                        timeZone: CONFIG.TIMEZONE
-                    });
-                    const categoryIcons = { candles: '🕯️', havdalah: '✨', parashat: '📖', holiday: '✡️' };
-
-                    const parsed = data.items.map(item => {
-                        const d = new Date(item.date);
-                        const hasTime = typeof item.date === 'string' && item.date.includes('T');
-                        let subStr = '';
-                        if (!isNaN(d.getTime())) {
-                            subStr = hasTime ? `${fmtDay.format(d)} · ${fmtTime.format(d)}` : fmtDay.format(d);
-                        }
-                        const icon = categoryIcons[item.category] || '📅';
-                        return {
-                            title: `${icon} ${item.title}`,
-                            sub: subStr,
-                            category: item.category,
-                            rawDate: item.date,
-                            isoDate: hasTime ? item.date : null
-                        };
-                    });
-
-                    localStorage.setItem(cacheKey, JSON.stringify(parsed));
-                    renderHebcalEvents(parsed);
-                    return;
+                const items = Array.isArray(data?.items) ? data.items : [];
+                renderHebcalEvents(items);
+                writeCache({ hebcal: items, hebcalKey: cacheKey, hebcalTs: Date.now() });
+            } catch {
+                const cache = readCache();
+                if (cache.hebcal && cache.hebcalKey === cacheKey) {
+                    renderHebcalEvents(cache.hebcal);
+                } else {
+                    DOM.hebcalCard.classList.add('hidden');
                 }
-            } catch (err) {
-                console.warn('Hebcal fetch failed, using cache/fallback:', err);
             }
-
-            const cached = localStorage.getItem(cacheKey);
-            if (cached) {
-                renderHebcalEvents(JSON.parse(cached));
-            } else {
-                renderHebcalEvents([]);
-            }
-        }
-
-        function isEventWithin36Hours(item, now = new Date()) {
-            const raw = item.isoDate || item.rawDate;
-            if (!raw) return false;
-
-            const nowMs = now.getTime();
-            const windowEndMs = nowMs + (36 * 60 * 60 * 1000);
-
-            if (typeof raw === 'string' && raw.includes('T')) {
-                const eventMs = new Date(raw).getTime();
-                return !isNaN(eventMs) && eventMs >= nowMs && eventMs <= windowEndMs;
-            }
-
-            // All-day event (YYYY-MM-DD): check if that calendar day overlaps [now, now + 36h]
-            const parts = raw.split('-').map(Number);
-            if (parts.length === 3) {
-                const dayStart = new Date(parts[0], parts[1] - 1, parts[2], 0, 0, 0).getTime();
-                const dayEnd = new Date(parts[0], parts[1] - 1, parts[2], 23, 59, 59, 999).getTime();
-                return dayEnd >= nowMs && dayStart <= windowEndMs;
-            }
-
-            return false;
-        }
-
-        function renderHebcalEvents(items) {
-            const now = new Date();
-            const upcoming = items.filter(item => isEventWithin36Hours(item, now));
-            state.hebcalItems = upcoming.slice(0, CONFIG.HEBCAL.MAX_ITEMS);
-
-            if (state.hebcalItems.length === 0) {
-                DOM.hebcalCard.classList.add('hidden');
-                DOM.hebcalEventsList.innerHTML = '';
-                return;
-            }
-
-            DOM.hebcalCard.classList.remove('hidden');
-            DOM.hebcalEventsList.innerHTML = state.hebcalItems.map((item, idx) => `
-                <div id="hebcal-item-${idx}" class="glass-panel rounded-[clamp(0.75rem,1.75vh,1.15rem)] px-[clamp(0.65rem,1.15vw,1.15rem)] py-[clamp(0.4rem,1.15vh,0.85rem)] shadow-lg transition-all duration-500">
-                    <div class="flex items-center justify-between gap-2">
-                        <div class="font-semibold text-white leading-tight truncate">${item.title}</div>
-                        <span id="hebcal-countdown-${idx}" class="hidden shrink-0 px-2 py-0.5 rounded-full bg-amber-400/25 border border-amber-300/50 text-amber-200 text-[clamp(0.62rem,min(0.82vw,1.75vh),0.9rem)] font-bold tabular-nums"></span>
-                    </div>
-                    ${item.sub ? `<div class="text-[clamp(0.67rem,min(0.92vw,2vh),1.05rem)] text-amber-200/90 mt-0.5 font-medium truncate">${item.sub}</div>` : ''}
-                </div>
-            `).join('');
-            updateCandleCountdown(now);
-        }
-
-        function updateCandleCountdown(now = new Date()) {
-            const windowMs = 3 * 60 * 60 * 1000; // Highlight within 3 hours before candle lighting
-            state.hebcalItems.forEach((item, idx) => {
-                const cardEl = document.getElementById(`hebcal-item-${idx}`);
-                const badgeEl = document.getElementById(`hebcal-countdown-${idx}`);
-                if (!cardEl || !badgeEl) return;
-
-                if (item.category === 'candles' && item.isoDate) {
-                    const targetMs = new Date(item.isoDate).getTime();
-                    const diffMs = targetMs - now.getTime();
-
-                    if (diffMs > 0 && diffMs <= windowMs) {
-                        const totalMins = Math.floor(diffMs / 60000);
-                        const hrs = Math.floor(totalMins / 60);
-                        const mins = totalMins % 60;
-                        const secs = Math.floor((diffMs % 60000) / 1000);
-
-                        badgeEl.textContent = hrs > 0
-                            ? `in ${hrs}h ${mins}m`
-                            : (mins > 0 ? `in ${mins}m ${String(secs).padStart(2, '0')}s` : `in ${secs}s`);
-                        badgeEl.classList.remove('hidden');
-                        cardEl.classList.add('ring-1', 'ring-amber-300/60', 'bg-amber-950/40');
-                        return;
-                    }
-                }
-
-                badgeEl.classList.add('hidden');
-                cardEl.classList.remove('ring-1', 'ring-amber-300/60', 'bg-amber-950/40');
-            });
         }
 
         /* ==========================================================================
-           KITCHEN TIMERS & TONE.JS AUDIO ENGINE
+           iOS 26 CONTROL CENTER TIMER SLIDER & COUNTDOWN
            ========================================================================== */
+        function updateTimerSliderUI(mins) {
+            const clamped = Math.max(1, Math.min(60, Math.round(mins)));
+            state.selectedTimerMins = clamped;
+            const pct = (clamped / 60) * 100;
+            DOM.iosTimerFill.style.height = `${pct}%`;
+            DOM.iosTimerValue.textContent = String(clamped);
+            DOM.iosTimerTrack.setAttribute('aria-valuenow', String(clamped));
+            DOM.btnIosTimerStart.textContent = `Start ${clamped}m`;
+        }
+
+        function setSliderFromClientY(clientY) {
+            const rect = DOM.iosTimerTrack.getBoundingClientRect();
+            const ratio = 1 - ((clientY - rect.top) / rect.height);
+            const rawMins = Math.round(ratio * 60);
+            updateTimerSliderUI(rawMins);
+        }
+
+        function toggleTimerPopover() {
+            DOM.iosTimerPopover.classList.toggle('hidden');
+        }
+
+        function closeTimerPopover() {
+            DOM.iosTimerPopover.classList.add('hidden');
+        }
+
         async function playTimerChime() {
             try {
                 await Tone.start();
                 const synth = new Tone.PolySynth(Tone.Synth, {
                     oscillator: { type: 'sine' },
-                    envelope: { attack: 0.02, decay: 0.3, sustain: 0.1, release: 1.2 }
+                    envelope: { attack: 0.02, decay: 0.4, sustain: 0.1, release: 1.4 }
                 }).toDestination();
                 synth.volume.value = CONFIG.SOUND.CHIME_VOLUME_DB;
 
@@ -774,96 +1007,152 @@
                 synth.triggerAttackRelease('C5', '8n', now);
                 synth.triggerAttackRelease('E5', '8n', now + 0.18);
                 synth.triggerAttackRelease('G5', '8n', now + 0.36);
-                synth.triggerAttackRelease('C6', '4n', now + 0.54);
-            } catch (err) {
-                console.warn('Audio chime unavailable:', err);
+                synth.triggerAttackRelease('C6', '2n', now + 0.54);
+
+                setTimeout(() => synth.dispose(), 3500);
+            } catch {
+                // Audio context blocked
             }
         }
 
-        function startTimer(minutes) {
-            clearTimer();
-            state.timerEndTime = Date.now() + minutes * 60 * 1000;
-            DOM.btnCancelTimer.classList.remove('hidden');
-            updateTimerDisplay();
-            state.timerInterval = setInterval(updateTimerDisplay, 500);
+        function stopTimer() {
+            if (state.timerIntervalId) {
+                clearInterval(state.timerIntervalId);
+                state.timerIntervalId = null;
+            }
+            state.timerEndTimestamp = null;
+            state.timerTotalMs = 0;
+            DOM.topTimerPill.classList.add('hidden');
         }
 
         function updateTimerDisplay() {
-            if (!state.timerEndTime) return;
-            const remainingMs = state.timerEndTime - Date.now();
+            if (!state.timerEndTimestamp) return;
+            const remainingMs = state.timerEndTimestamp - Date.now();
+
             if (remainingMs <= 0) {
-                clearTimer();
+                stopTimer();
                 playTimerChime();
                 return;
             }
+
+            if (DOM.topTimerRing && state.timerTotalMs > 0) {
+                const circumference = 94.25;
+                const progress = Math.max(0, Math.min(1, remainingMs / state.timerTotalMs));
+                DOM.topTimerRing.style.strokeDashoffset = String(circumference * (1 - progress));
+            }
+
             const totalSecs = Math.ceil(remainingMs / 1000);
             const mins = Math.floor(totalSecs / 60);
             const secs = totalSecs % 60;
-            DOM.btnCancelTimer.textContent = `✕ ${mins}:${String(secs).padStart(2, '0')}`;
+            DOM.topTimerCountdown.textContent = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
         }
 
-        function clearTimer() {
-            if (state.timerInterval) {
-                clearInterval(state.timerInterval);
-                state.timerInterval = null;
+        function startTimer(minutes) {
+            stopTimer();
+            closeTimerPopover();
+            state.timerTotalMs = minutes * 60 * 1000;
+            state.timerEndTimestamp = Date.now() + state.timerTotalMs;
+            if (DOM.topTimerRing) {
+                DOM.topTimerRing.style.strokeDashoffset = '0';
             }
-            state.timerEndTime = null;
-            DOM.btnCancelTimer.classList.add('hidden');
-            DOM.btnCancelTimer.textContent = '✕ Stop';
+            DOM.topTimerPill.classList.remove('hidden');
+            updateTimerDisplay();
+            state.timerIntervalId = setInterval(updateTimerDisplay, 250);
         }
 
-        async function cycleAmbientSound() {
-            const modes = ['off', 'white', 'fan', 'brown', 'rain', 'bowl'];
-            const labels = {
-                off: '🎧 Off',
-                white: '💨 White',
-                fan: '🌀 Fan',
-                brown: '🌊 Brown',
-                rain: '🌧️ Rain',
-                bowl: '🔔 Bowl'
-            };
+        /* ==========================================================================
+           AMBIENT SOUNDSCAPES (WHITE, FAN, BROWN, RAIN, SINGING BOWLS)
+           ========================================================================== */
+        function stopAmbientSound() {
+            if (state.ambientNodes) {
+                try {
+                    state.ambientNodes.dispose();
+                } catch {
+                    // Ignore disposal errors
+                }
+                state.ambientNodes = null;
+            }
+        }
 
-            const nextMode = modes[(modes.indexOf(state.ambientMode) + 1) % modes.length];
+        function updateSoundButtonStyles() {
+            DOM.soundBtns.forEach(btn => {
+                const isActive = btn.dataset.sound === state.ambientMode;
+                btn.classList.toggle('bg-amber-400/30', isActive);
+                btn.classList.toggle('ring-1', isActive);
+                btn.classList.toggle('ring-amber-300/70', isActive);
+                btn.classList.toggle('text-amber-100', isActive);
+                btn.classList.toggle('bg-white/10', !isActive);
+            });
+        }
+
+        async function toggleAmbientSound(mode) {
+            const nextMode = state.ambientMode === mode ? 'off' : mode;
             stopAmbientSound();
             state.ambientMode = nextMode;
-            DOM.btnAmbientSound.textContent = labels[nextMode];
+            updateSoundButtonStyles();
 
             if (nextMode === 'off') return;
 
             try {
                 await Tone.start();
 
-                if (nextMode === 'fan') {
-                    // Oscillating box-fan rumble with gentle LFO air sweep
-                    const noise = new Tone.Noise('brown');
-                    const filter = new Tone.Filter({ type: 'lowpass', frequency: 190, Q: 1.8 }).toDestination();
-                    const lfo = new Tone.LFO({ frequency: 0.22, min: 130, max: 240 }).start();
-
-                    lfo.connect(filter.frequency);
-                    noise.volume.value = CONFIG.SOUND.VOLUME_DB + 4;
-                    noise.connect(filter);
-                    noise.start();
+                if (nextMode === 'white') {
+                    const whiteNoise = new Tone.Noise('white');
+                    const filter = new Tone.Filter({ type: 'lowpass', frequency: 1400, rolloff: -12 }).toDestination();
+                    whiteNoise.volume.value = CONFIG.SOUND.VOLUME_DB - 2;
+                    whiteNoise.connect(filter);
+                    whiteNoise.start();
 
                     state.ambientNodes = {
                         dispose: () => {
+                            whiteNoise.stop();
+                            whiteNoise.dispose();
+                            filter.dispose();
+                        }
+                    };
+                } else if (nextMode === 'fan') {
+                    const fanNoise = new Tone.Noise('pink');
+                    const lowpass = new Tone.Filter({ type: 'lowpass', frequency: 240, rolloff: -24 }).toDestination();
+                    const lfo = new Tone.LFO({ frequency: 0.14, min: 185, max: 285 }).start();
+                    lfo.connect(lowpass.frequency);
+
+                    fanNoise.volume.value = CONFIG.SOUND.VOLUME_DB + 2;
+                    fanNoise.connect(lowpass);
+                    fanNoise.start();
+
+                    state.ambientNodes = {
+                        dispose: () => {
+                            fanNoise.stop();
+                            fanNoise.dispose();
                             lfo.stop();
                             lfo.dispose();
-                            noise.stop();
-                            noise.dispose();
+                            lowpass.dispose();
+                        }
+                    };
+                } else if (nextMode === 'brown') {
+                    const brownNoise = new Tone.Noise('brown');
+                    const filter = new Tone.Filter({ type: 'lowpass', frequency: 420, rolloff: -12 }).toDestination();
+                    brownNoise.volume.value = CONFIG.SOUND.VOLUME_DB + 3;
+                    brownNoise.connect(filter);
+                    brownNoise.start();
+
+                    state.ambientNodes = {
+                        dispose: () => {
+                            brownNoise.stop();
+                            brownNoise.dispose();
                             filter.dispose();
                         }
                     };
                 } else if (nextMode === 'rain') {
-                    // Layered rainfall: bandpass mist + low shower body + random water droplets
-                    const mistNoise = new Tone.Noise('white');
+                    const mistNoise = new Tone.Noise('pink');
                     const mistFilter = new Tone.Filter({ type: 'bandpass', frequency: 1650, Q: 0.65 }).toDestination();
                     mistNoise.volume.value = CONFIG.SOUND.VOLUME_DB - 3;
                     mistNoise.connect(mistFilter);
                     mistNoise.start();
 
                     const bodyNoise = new Tone.Noise('brown');
-                    const bodyFilter = new Tone.Filter({ type: 'lowpass', frequency: 420 }).toDestination();
-                    bodyNoise.volume.value = CONFIG.SOUND.VOLUME_DB;
+                    const bodyFilter = new Tone.Filter({ type: 'lowpass', frequency: 520, rolloff: -12 }).toDestination();
+                    bodyNoise.volume.value = CONFIG.SOUND.VOLUME_DB - 1;
                     bodyNoise.connect(bodyFilter);
                     bodyNoise.start();
 
@@ -871,26 +1160,21 @@
                     const dropSynth = new Tone.MembraneSynth({
                         pitchDecay: 0.015,
                         octaves: 2.5,
-                        envelope: { attack: 0.002, decay: 0.08, sustain: 0, release: 0.1 }
+                        envelope: { attack: 0.002, decay: 0.09, sustain: 0, release: 0.08 }
                     }).connect(dropReverb);
                     dropSynth.volume.value = CONFIG.SOUND.VOLUME_DB - 14;
 
-                    const dropPitches = ['G5', 'A5', 'C6', 'D6', 'E6', 'G6', 'A6'];
-                    let active = true;
-                    let dropTimer = null;
-
-                    const triggerDroplet = () => {
-                        if (!active) return;
-                        const pitch = dropPitches[Math.floor(Math.random() * dropPitches.length)];
-                        dropSynth.triggerAttackRelease(pitch, '32n', undefined, 0.25 + Math.random() * 0.45);
-                        dropTimer = setTimeout(triggerDroplet, 180 + Math.random() * 650);
-                    };
-                    triggerDroplet();
+                    const dropNotes = ['G5', 'A5', 'C6', 'D6', 'E6', 'G6'];
+                    const dropInterval = setInterval(() => {
+                        if (Math.random() > 0.32) {
+                            const note = dropNotes[Math.floor(Math.random() * dropNotes.length)];
+                            dropSynth.triggerAttackRelease(note, '32n');
+                        }
+                    }, 260);
 
                     state.ambientNodes = {
                         dispose: () => {
-                            active = false;
-                            if (dropTimer) clearTimeout(dropTimer);
+                            clearInterval(dropInterval);
                             mistNoise.stop();
                             mistNoise.dispose();
                             mistFilter.dispose();
@@ -902,169 +1186,172 @@
                         }
                     };
                 } else if (nextMode === 'bowl') {
-                    // Multi-pitch harmonic crystal singing bowl sound bath
-                    const reverb = new Tone.Reverb({ decay: 7, wet: 0.65 }).toDestination();
-                    const synth = new Tone.PolySynth(Tone.Synth, {
+                    const reverb = new Tone.Reverb({ decay: 6.5, wet: 0.65 }).toDestination();
+                    const bowlSynth = new Tone.PolySynth(Tone.Synth, {
                         oscillator: { type: 'sine' },
-                        envelope: { attack: 1.8, decay: 2.5, sustain: 0.35, release: 5.5 }
+                        envelope: { attack: 1.4, decay: 2.5, sustain: 0.35, release: 5.5 }
                     }).connect(reverb);
-                    synth.volume.value = CONFIG.SOUND.VOLUME_DB - 2;
+                    bowlSynth.volume.value = CONFIG.SOUND.VOLUME_DB - 4;
 
-                    const pitches = [216, 256, 288, 324, 384, 432, 512, 576, 648];
-                    let active = true;
-                    let intervalId = null;
+                    const bowlFrequencies = [216, 256, 288, 324, 384, 432, 512, 648, 864];
+                    let lastFreq = 0;
 
                     const strikeBowl = () => {
-                        if (!active) return;
-                        const freq = pitches[Math.floor(Math.random() * pitches.length)];
-                        synth.triggerAttackRelease(freq, 4.5);
-                        if (Math.random() > 0.45) {
-                            const harmonic = pitches[Math.floor(Math.random() * pitches.length)];
-                            if (harmonic !== freq) {
-                                setTimeout(() => {
-                                    if (active) synth.triggerAttackRelease(harmonic, 4.0);
-                                }, 1400);
-                            }
-                        }
+                        const choices = bowlFrequencies.filter(f => f !== lastFreq);
+                        const fundamental = choices[Math.floor(Math.random() * choices.length)];
+                        lastFreq = fundamental;
+                        bowlSynth.triggerAttackRelease([fundamental, fundamental * 2.756], 3.2);
                     };
 
                     strikeBowl();
-                    intervalId = setInterval(strikeBowl, 4800);
+                    const bowlInterval = setInterval(strikeBowl, 4800);
 
                     state.ambientNodes = {
                         dispose: () => {
-                            active = false;
-                            if (intervalId) clearInterval(intervalId);
-                            synth.releaseAll();
-                            setTimeout(() => {
-                                synth.dispose();
-                                reverb.dispose();
-                            }, 200);
-                        }
-                    };
-                } else {
-                    // White or Brown noise
-                    const noise = new Tone.Noise(nextMode);
-                    const filter = new Tone.Filter({
-                        type: 'lowpass',
-                        frequency: nextMode === 'brown' ? 320 : 2800
-                    }).toDestination();
-
-                    noise.volume.value = CONFIG.SOUND.VOLUME_DB;
-                    noise.connect(filter);
-                    noise.start();
-
-                    state.ambientNodes = {
-                        dispose: () => {
-                            noise.stop();
-                            noise.dispose();
-                            filter.dispose();
+                            clearInterval(bowlInterval);
+                            bowlSynth.releaseAll();
+                            bowlSynth.dispose();
+                            reverb.dispose();
                         }
                     };
                 }
-            } catch (err) {
-                console.warn('Ambient audio failed:', err);
+            } catch {
                 state.ambientMode = 'off';
-                DOM.btnAmbientSound.textContent = labels.off;
-            }
-        }
-
-        function stopAmbientSound() {
-            if (state.ambientNodes) {
-                try {
-                    if (typeof state.ambientNodes.dispose === 'function') {
-                        state.ambientNodes.dispose();
-                    }
-                } catch (_) {}
-                state.ambientNodes = null;
+                updateSoundButtonStyles();
             }
         }
 
         /* ==========================================================================
-           OLED BURN-IN PIXEL SHIFT & NETWORK STATUS
-           ========================================================================== */
-        function applyPixelShift() {
-            if (!CONFIG.PIXEL_SHIFT.ENABLED) return;
-            const max = CONFIG.PIXEL_SHIFT.MAX_OFFSET_PX;
-            const dx = Math.round((Math.random() * 2 - 1) * max);
-            const dy = Math.round((Math.random() * 2 - 1) * max);
-            DOM.root.style.transform = `translate3d(${dx}px, ${dy}px, 0)`;
-        }
-
-        function updateNetworkStatus() {
-            if (navigator.onLine) {
-                DOM.networkOfflinePill.classList.add('hidden');
-            } else {
-                DOM.networkOfflinePill.classList.remove('hidden');
-            }
-        }
-
-        /* ==========================================================================
-           EVENT LISTENERS & INITIALIZATION
+           TOUCH & INTERACTION CONTROLS
            ========================================================================== */
         function initControls() {
-            document.querySelectorAll('.timer-btn').forEach(btn => {
-                btn.addEventListener('click', () => {
-                    const mins = parseInt(btn.getAttribute('data-timer'), 10);
-                    if (!isNaN(mins)) startTimer(mins);
-                });
+            // Timer Popover Toggle & iOS Capsule Slider Drag
+            DOM.btnOpenTimer.addEventListener('click', (e) => {
+                e.stopPropagation();
+                toggleTimerPopover();
             });
 
-            DOM.btnCancelTimer.addEventListener('click', clearTimer);
-            DOM.btnAmbientSound.addEventListener('click', cycleAmbientSound);
-            DOM.btnCycleBg.addEventListener('click', () => setWallpaper(state.bgCategory, true));
+            let isDraggingSlider = false;
+            DOM.iosTimerTrack.addEventListener('pointerdown', (e) => {
+                isDraggingSlider = true;
+                DOM.iosTimerTrack.setPointerCapture(e.pointerId);
+                setSliderFromClientY(e.clientY);
+            });
 
+            DOM.iosTimerTrack.addEventListener('pointermove', (e) => {
+                if (!isDraggingSlider) return;
+                setSliderFromClientY(e.clientY);
+            });
+
+            const endSliderDrag = (e) => {
+                if (!isDraggingSlider) return;
+                isDraggingSlider = false;
+                if (DOM.iosTimerTrack.hasPointerCapture(e.pointerId)) {
+                    DOM.iosTimerTrack.releasePointerCapture(e.pointerId);
+                }
+            };
+
+            DOM.iosTimerTrack.addEventListener('pointerup', endSliderDrag);
+            DOM.iosTimerTrack.addEventListener('pointercancel', endSliderDrag);
+
+            DOM.iosTimerTrack.addEventListener('keydown', (e) => {
+                if (e.key === 'ArrowUp' || e.key === 'ArrowRight') {
+                    e.preventDefault();
+                    updateTimerSliderUI(state.selectedTimerMins + 1);
+                } else if (e.key === 'ArrowDown' || e.key === 'ArrowLeft') {
+                    e.preventDefault();
+                    updateTimerSliderUI(state.selectedTimerMins - 1);
+                } else if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    startTimer(state.selectedTimerMins);
+                }
+            });
+
+            DOM.btnIosTimerStart.addEventListener('click', () => {
+                startTimer(state.selectedTimerMins);
+            });
+
+            DOM.btnTopCancelTimer.addEventListener('click', stopTimer);
+
+            // Dismiss timer popover when tapping outside
+            document.addEventListener('pointerdown', (e) => {
+                if (DOM.iosTimerPopover.classList.contains('hidden')) return;
+                if (e.target.closest('#ios-timer-popover') || e.target.closest('#btn-open-timer')) return;
+                closeTimerPopover();
+            });
+
+            // Sound buttons
+            DOM.soundBtns.forEach(btn => {
+                btn.addEventListener('click', () => toggleAmbientSound(btn.dataset.sound));
+            });
+
+            // Day / Night / Bedside Mode Toggle
             DOM.btnToggleNight.addEventListener('click', () => {
-                const cycle = ['day', 'night', 'bedside'];
-                const current = document.body.classList.contains('bedside-mode')
-                    ? 'bedside'
-                    : (DOM.nightOverlay.style.opacity === '1' ? 'night' : 'day');
-                state.displayModeOverride = cycle[(cycle.indexOf(current) + 1) % cycle.length];
-                updateNightMode();
+                const current = determineDisplayMode(new Date());
+                if (current === 'day') {
+                    state.nightModeOverride = 'night';
+                } else if (current === 'night') {
+                    state.nightModeOverride = 'bedside';
+                } else {
+                    state.nightModeOverride = 'day';
+                }
+                applyDisplayMode(new Date());
             });
 
+            // Blackout Screen Toggle
             DOM.btnBlackout.addEventListener('click', () => {
+                state.isBlackout = true;
+                closeTimerPopover();
                 DOM.blackoutOverlay.classList.remove('hidden');
             });
 
             DOM.blackoutOverlay.addEventListener('click', () => {
+                state.isBlackout = false;
                 DOM.blackoutOverlay.classList.add('hidden');
             });
 
-            document.body.addEventListener('dblclick', (e) => {
-                if (e.target.closest('#control-dock')) return;
-                DOM.blackoutOverlay.classList.toggle('hidden');
-            });
-
+            // Manual Refresh Button
             DOM.btnRefresh.addEventListener('click', () => {
                 DOM.refreshIcon.style.transform = 'rotate(360deg)';
-                setTimeout(() => { DOM.refreshIcon.style.transform = 'rotate(0deg)'; }, 550);
-                fetchWeatherAndEnv();
-                fetchHebcalCalendar();
+                setTimeout(() => {
+                    DOM.refreshIcon.style.transform = 'rotate(0deg)';
+                }, 550);
+                fetchWeather();
+                fetchHebcal();
             });
-
-            window.addEventListener('online', () => {
-                updateNetworkStatus();
-                fetchWeatherAndEnv();
-                fetchHebcalCalendar();
-            });
-            window.addEventListener('offline', updateNetworkStatus);
         }
 
-        window.addEventListener('DOMContentLoaded', () => {
-            updateClock();
+        /* ==========================================================================
+           INITIALIZATION
+           ========================================================================== */
+        window.addEventListener('online', updateNetworkStatus);
+        window.addEventListener('offline', updateNetworkStatus);
+
+        window.onload = function () {
             updateNetworkStatus();
-            setWallpaper('clear', false);
             initControls();
+            updateTimerSliderUI(state.selectedTimerMins);
 
-            fetchWeatherAndEnv();
-            fetchHebcalCalendar();
+            // Hydrate cached data immediately for instant startup
+            const cached = readCache();
+            if (cached.weather) renderWeather(cached.weather);
+            if (cached.hebcal) renderHebcalEvents(cached.hebcal);
+            if (!state.currentWallpaperUrl) {
+                crossfadeWallpaper(CONFIG.FALLBACK_WALLPAPERS[0]);
+            }
 
+            // Start live clock & background data polling
+            updateClock();
             setInterval(updateClock, CONFIG.CLOCK_INTERVAL_MS);
-            setInterval(fetchWeatherAndEnv, CONFIG.WEATHER_INTERVAL_MS);
-            setInterval(fetchHebcalCalendar, CONFIG.WEATHER_INTERVAL_MS * 3);
+
+            fetchWeather();
+            setInterval(fetchWeather, CONFIG.WEATHER_INTERVAL_MS);
+
+            fetchHebcal();
+            setInterval(fetchHebcal, 30 * 60 * 1000);
+
             setInterval(applyPixelShift, CONFIG.PIXEL_SHIFT.INTERVAL_MS);
-        });
+        };
     </script>
 </body>
 </html>
