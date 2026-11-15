@@ -659,6 +659,7 @@
                             title: `${icon} ${item.title}`,
                             sub: subStr,
                             category: item.category,
+                            rawDate: item.date,
                             isoDate: hasTime ? item.date : null
                         };
                     });
@@ -675,12 +676,45 @@
             if (cached) {
                 renderHebcalEvents(JSON.parse(cached));
             } else {
-                renderHebcalEvents([{ title: '📅 Schedule unavailable', sub: 'Check connection' }]);
+                renderHebcalEvents([]);
             }
         }
 
+        function isEventWithin36Hours(item, now = new Date()) {
+            const raw = item.isoDate || item.rawDate;
+            if (!raw) return false;
+
+            const nowMs = now.getTime();
+            const windowEndMs = nowMs + (36 * 60 * 60 * 1000);
+
+            if (typeof raw === 'string' && raw.includes('T')) {
+                const eventMs = new Date(raw).getTime();
+                return !isNaN(eventMs) && eventMs >= nowMs && eventMs <= windowEndMs;
+            }
+
+            // All-day event (YYYY-MM-DD): check if that calendar day overlaps [now, now + 36h]
+            const parts = raw.split('-').map(Number);
+            if (parts.length === 3) {
+                const dayStart = new Date(parts[0], parts[1] - 1, parts[2], 0, 0, 0).getTime();
+                const dayEnd = new Date(parts[0], parts[1] - 1, parts[2], 23, 59, 59, 999).getTime();
+                return dayEnd >= nowMs && dayStart <= windowEndMs;
+            }
+
+            return false;
+        }
+
         function renderHebcalEvents(items) {
-            state.hebcalItems = items.slice(0, CONFIG.HEBCAL.MAX_ITEMS);
+            const now = new Date();
+            const upcoming = items.filter(item => isEventWithin36Hours(item, now));
+            state.hebcalItems = upcoming.slice(0, CONFIG.HEBCAL.MAX_ITEMS);
+
+            if (state.hebcalItems.length === 0) {
+                DOM.hebcalCard.classList.add('hidden');
+                DOM.hebcalEventsList.innerHTML = '';
+                return;
+            }
+
+            DOM.hebcalCard.classList.remove('hidden');
             DOM.hebcalEventsList.innerHTML = state.hebcalItems.map((item, idx) => `
                 <div id="hebcal-item-${idx}" class="glass-panel rounded-[clamp(0.75rem,1.75vh,1.15rem)] px-[clamp(0.65rem,1.15vw,1.15rem)] py-[clamp(0.4rem,1.15vh,0.85rem)] shadow-lg transition-all duration-500">
                     <div class="flex items-center justify-between gap-2">
@@ -690,7 +724,7 @@
                     ${item.sub ? `<div class="text-[clamp(0.67rem,min(0.92vw,2vh),1.05rem)] text-amber-200/90 mt-0.5 font-medium truncate">${item.sub}</div>` : ''}
                 </div>
             `).join('');
-            updateCandleCountdown(new Date());
+            updateCandleCountdown(now);
         }
 
         function updateCandleCountdown(now = new Date()) {
