@@ -83,4 +83,4 @@ const USER_SETTINGS = {
 - **Styling:** [Tailwind CSS CDN](https://tailwindcss.com/)
 - **Web Audio Synthesis:** [Tone.js](https://tonejs.github.io/)
 
-[Gemini](https://share.gemini.google/02nE5Y7aUHAE)_
+[Gemini](https://share.gemini.google/02nE5Y7aUHAE)
